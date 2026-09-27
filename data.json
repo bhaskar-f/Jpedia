@@ -1,0 +1,41 @@
+{
+  "site": { "name": "j-info", "tagline": "Don't get Lost on your Job Preparation" },
+  "jobs": [
+    { "id": "wbp-constable", "title": "WBP Constable", "organization": "West Bengal Police Selection Board", "category": "police", "tags": ["police", "west bengal", "constable", "10th"], "icon": "shield", "deadline": "12th Oct 2026", "qualification": "10th Pass", "age": "18–30", "location": "West Bengal", "status": "Application Open", "source": "West Bengal Police", "officialUrl": "https://wbpolice.gov.in/" },
+    { "id": "delhi-police-si", "title": "Delhi Police SI", "organization": "SSC", "category": "ssc", "tags": ["ssc", "police", "delhi", "sub inspector", "graduate"], "icon": "badge", "deadline": "12th Oct 2026", "qualification": "Graduate", "age": "20–30", "location": "Delhi", "status": "Application Open", "source": "SSC", "officialUrl": "https://ssc.gov.in/" },
+    { "id": "ssc-phase-xv", "title": "Phase XV", "organization": "SSC", "category": "ssc", "tags": ["ssc", "phase xv", "10th", "12th", "graduate"], "icon": "document", "deadline": "12th Oct 2026", "qualification": "10th / 12th / Graduate", "age": "18–30", "location": "India", "status": "Recruitment Update", "source": "SSC", "officialUrl": "https://ssc.gov.in/" }
+  ],
+  "communities": [
+    { "id": "ssc-cgl", "name": "SSC CGL Preparation", "description": "Prepare together for SSC CGL.", "members": 0, "icon": "people" },
+    { "id": "ssc-chsl", "name": "SSC CHSL Preparation", "description": "Prepare together for SSC CHSL.", "members": 0, "icon": "people" },
+    { "id": "wbcs", "name": "WBCS Preparation", "description": "Prepare together for WBCS.", "members": 0, "icon": "people" },
+    { "id": "police-exams", "name": "Police Exam Preparation", "description": "Prepare together for police exams.", "members": 0, "icon": "people" }
+  ],
+  "preparation": [
+    { "id": "syllabus", "name": "Syllabus", "description": "Know what to study", "icon": "list" },
+    { "id": "papers", "name": "Previous Papers", "description": "Practice real questions", "icon": "document" },
+    { "id": "mock", "name": "Mock Tests", "description": "Test your preparation", "icon": "check" },
+    { "id": "resources", "name": "Study Materials", "description": "Keep everything together", "icon": "book" }
+  ],
+  "boards": [
+    { "id": "upsc", "name": "UPSC", "category": "upsc", "url": "https://www.upsc.gov.in/", "icon": "building" },
+    { "id": "ssc", "name": "SSC", "category": "ssc", "url": "https://ssc.gov.in/", "icon": "building" },
+    { "id": "psc", "name": "PSC", "category": "psc", "url": "", "icon": "building" },
+    { "id": "wbcs-board", "name": "WBCS", "category": "wbcs", "url": "", "icon": "building" },
+    { "id": "rrb", "name": "RRB", "category": "rrb", "url": "https://www.rrbcdg.gov.in/", "icon": "train" },
+    { "id": "bpsc", "name": "BPSC", "category": "bpsc", "url": "", "icon": "building" },
+    { "id": "ssc-board", "name": "SSC", "category": "ssc", "url": "https://ssc.gov.in/", "icon": "building" },
+    { "id": "cil", "name": "CIL", "category": "cil", "url": "", "icon": "building" }
+  ],
+  "notifications": [
+    { "id": "notice-delhi", "jobId": "delhi-police-si", "label": "NEW", "text": "Delhi Police SI — application notification" },
+    { "id": "notice-wbp", "jobId": "wbp-constable", "label": "DATE", "text": "WBP Constable — application closes 12th Oct 2026" },
+    { "id": "notice-phase", "jobId": "ssc-phase-xv", "label": "SSC", "text": "Phase XV — recruitment update" }
+  ],
+  "faqs": [
+    { "question": "What is this platform for?", "answer": "It helps you discover jobs, follow recruitment updates, prepare for exams and keep applications organized." },
+    { "question": "Where does the job information come from?", "answer": "Job information should be verified against the official recruitment notification before you apply." },
+    { "question": "Can I save a job for later?", "answer": "Yes. Use the Save option in the job details window to keep it in your preparation list." },
+    { "question": "Can I track my applications?", "answer": "Yes. Add an application from a job's details window and its status will appear in the Application Tracker." }
+  ]
+}

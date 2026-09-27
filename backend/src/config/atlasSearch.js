@@ -1,0 +1,4 @@
+const {Job}=require('../models');
+const definition={mappings:{dynamic:false,fields:{title:{type:'string'},organization:{type:'string'},boardName:{type:'string'},tags:{type:'string'},category:{type:'string'},qualification:{type:'string'},location:{type:'string'},description:{type:'string'},status:{type:'token'}}}};
+async function ensureJobSearchIndex(){try{const indexes=await Job.listSearchIndexes();if(indexes.some(index=>index.name==='jobs_search'))return;await Job.createSearchIndex({name:'jobs_search',definition});console.info('MongoDB Atlas Search index jobs_search creation requested.');}catch(error){console.warn({ event: 'atlas_search_index_setup_failed', errorType: error.name || 'Error', code: error.code || 'ATLAS_SEARCH_ERROR', action: 'Create jobs_search using the documented index definition.' });}}
+module.exports={ensureJobSearchIndex,definition};

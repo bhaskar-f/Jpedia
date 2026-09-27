@@ -1,0 +1,40 @@
+{
+  "name": "j-info-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Government jobs and exam preparation platform",
+  "main": "backend/src/server.js",
+  "scripts": {
+    "dev": "nodemon backend/src/server.js",
+    "start": "node backend/src/server.js",
+    "seed": "node backend/src/seeds/seed.js",
+    "test": "node --test backend/src/config/*.test.js backend/src/seeds/*.test.js backend/src/validators/*.test.js backend/src/services/*.test.js backend/src/middleware/*.test.js backend/src/controllers/*.test.js",
+     "create:dev-user": "node backend/src/seeds/create-dev-user.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.5.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "multer": "^2.0.2",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.0.10",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "twilio": "^5.4.0",
+    "zod": "^3.24.1",
+    "express-mongo-sanitize": "^2.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
