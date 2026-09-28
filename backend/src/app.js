@@ -112,6 +112,7 @@ for (const file of [
   "job-content.js",
   "data.json",
   "logo.png",
+  "favicon.png"
 ])
   app.get(`/${file}`, (req, res) =>
     res.sendFile(path.join(frontendRoot, file)),
