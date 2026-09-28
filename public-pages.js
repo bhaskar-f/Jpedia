@@ -1,7 +1,7 @@
 (() => {
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
   const root = document.querySelector("#publicPageRoot");
-  const routePaths = ["/jobs", "/communities", "/notifications", "/faqs", "/dashboard", "/dashboard/saved", "/dashboard/applications", "/dashboard/notifications", "/profile", "/settings", "/services", "/services/preparation", "/services/eligibility", "/services/tracker", "/boards"];
+  const routePaths = ["/jobs", "/communities", "/notifications", "/faqs", "/dashboard", "/dashboard/saved", "/dashboard/applications", "/dashboard/notifications", "/profile", "/settings", "/services", "/services/preparation", "/services/eligibility", "/services/tracker", "/boards", "/privacy", "/terms", "/about", "/contact"];
   const isCommunityDetail = path.startsWith("/communities/");
   const userWorkspaceRoute = path === "/dashboard" || path.startsWith("/dashboard/") || path === "/profile" || path === "/settings";
   if (!root || (!routePaths.includes(path) && !path.startsWith("/dashboard/") && !isCommunityDetail)) return;
@@ -10,14 +10,14 @@
   if(userWorkspaceRoute)document.body.classList.add("user-workspace-route");
   const mobilePublicRoute = !userWorkspaceRoute && (
     path === "/jobs" || path === "/communities" || path.startsWith("/communities/") ||
-    path === "/services" || path.startsWith("/services/")
+    path === "/services" || path.startsWith("/services/") || ["/privacy", "/terms", "/about", "/contact"].includes(path)
   );
   if (mobilePublicRoute) {
     document.body.classList.add("public-mobile-shell");
     const mobileNav = document.querySelector("#mobileBottomNav");
     const active = path === "/jobs" ? "Jobs"
       : path === "/communities" || path.startsWith("/communities/") ? "Community"
-        : "Services";
+        : path.startsWith("/services") ? "Services" : "";
     const items = [["Home", "/", "home"], ["Jobs", "/jobs", "work"], ["Community", "/communities", "people"], ["Services", "/services", "list"]];
     if (mobileNav) mobileNav.replaceChildren(...items.map(([label, href, symbol]) => {
       const link = document.createElement("a");
@@ -48,6 +48,76 @@
   function page(title, description) { root.replaceChildren(); const wrap = add(root, "div", "public-page"); add(wrap, "p", "public-eyebrow", "J-INFO"); add(wrap, "h1", "", title); if (description) add(wrap, "p", "public-intro", description); return wrap; }
   function section(parent, title, href, linkText = "Explore all") { const block = add(parent, "section", "public-section"); const head = add(block, "div", "public-section-heading"); add(head, "h2", "", title); link(head, href, `${linkText} →`, "public-text-link"); return block; }
   function notice(parent, text, kind = "") { return add(parent, "p", `public-notice ${kind}`, text); }
+  const legalContent = {
+    "/privacy": {
+      title: "Privacy Policy", description: "What information Jpedia handles and how it is used in the current application.",
+      sections: [
+        ["1. About this policy", ["Jpedia provides job discovery, recruitment information, preparation resources, and related account features. This policy describes data handling visible in the current application code. It does not establish business practices that cannot be verified from that code."]],
+        ["2. Information associated with an account", ["The account model can store your name, email address, phone number, profile picture, date of birth, education details, location, preferred job categories, preferred boards or exams, account role, email and phone verification status, active status, Google account identifier, and account timestamps. Some older profile fields remain supported for compatibility.", "Password accounts store a bcrypt password hash, not the original password. Authentication records also include hashed refresh-token and one-time verification/reset-token values and their expiry times; raw one-time tokens are sent in links rather than stored as long-lived plaintext values."]],
+        ["3. Google Sign-In and Google user data", ["When you choose Google Sign-In, Jpedia requests the Google profile and email scopes. The OAuth callback receives a Google subject identifier, email and its verification status, display name, and profile photo when supplied. Jpedia requires a verified email. It uses the Google identifier and verified email to find or link an account, and can use the name and photo when creating a new account. The identifier, email, name, and profile picture may be stored in the Jpedia user record. Existing account roles, passwords, and profile fields are not replaced by Google sign-in.", "The application uses this Google data for sign-in, account creation/linking, and account identity. The OAuth code does not request Gmail, Drive, or other Google API access, and does not persist Google access or refresh tokens. No advertising or ad-targeting integration using Google account data was found in the application code. Google identity information is not sent to unrelated APIs by the application code; Google processes sign-in itself, and Jpedia stores account data in its configured database. Business practices outside this codebase cannot be determined from source inspection."]],
+        ["4. Profile, preferences, and personalization", ["Profile fields and preferences are used to display account details and personalize job recommendations. Job matching uses available profile education, location, job-category, and board preferences together with published job information. You can edit profile and notification preferences in the account workspace."]],
+        ["5. Saved jobs, applications, and notifications", ["For signed-in users, Jpedia stores saved-job references and application-tracker records. Tracker records may include status, dates, result, notes, and reminder date. The application stores website notification records and preferences for website, email, job matches, deadline reminders, and announcements. Email delivery is configured server-side; a notification may include information needed to deliver that message."]],
+        ["6. Communities and submitted content", ["Community records can include membership and role, posts, comments, reactions, and reports. Posts and comments are associated with their author account and may be visible to other community users. Reports include the reporting account, the reported content, reason, review status, and staff review details. Administrators can review reports, and authorized users can manage their own posts and comments subject to the route permissions."]],
+        ["7. Jobs and recruitment information", ["Jpedia stores recruitment notices, source references, job details, application links, and review/publishing records. The application includes automated discovery records, but discovered notices are held for review and are not automatically published. Job and eligibility information is informational; users should confirm current requirements and dates with the recruiting organization."]],
+        ["8. Resources and uploads", ["Resource records can contain a title, type, description, external URL or uploaded-file URL, access mode, original file name, MIME type, size, related board/job/community, author, and timestamps. The upload endpoint accepts PDF, PNG, JPEG, and WebP files up to the configured upload limit and sends accepted files to Cloudinary. Active resource links are returned by public resource endpoints; do not assume an uploaded resource is private. Authors can manage their own resources and authorized staff can manage resources. External URLs are stored separately and are not uploaded by Jpedia."]],
+        ["9. Cookies and authentication", ["Jpedia uses HTTP-only access and refresh cookies for authentication. The configured cookie behavior uses SameSite=Lax and sets Secure for HTTPS production when COOKIE_SECURE is enabled. The cookies are used to authenticate requests and refresh sessions; the application does not place authentication JWTs in browser local storage."]],
+        ["10. Service providers", ["The application uses Google for Google sign-in, MongoDB through the server's configured MongoDB connection for application records, Cloudinary for uploaded resource files, and a server-configured Nodemailer/SMTP transport for authentication and notification email. Twilio is integrated for phone OTP and optional SMS notifications when configured; phone sign-in endpoints are unavailable in production. Twilio credentials are not required for email or Google sign-in. The project identifies Render as its current deployment host, while database hosting depends on the operator's MongoDB URI."]],
+        ["11. Staff access", ["The application has USER, AUTHOR, ADMIN, and SUPER_ADMIN roles. Route authorization permits staff access to the records needed for their assigned management tasks; authors are restricted to their own managed content where the routes enforce ownership, and administration routes are role-restricted. The code cannot describe individual staff practices outside the application."]],
+        ["12. Storage and retention", ["Application records are stored in the configured MongoDB database. Uploaded resource files are stored with Cloudinary when that provider is configured. The application records creation/update timestamps, but no general retention schedule is defined in the code. Deactivated user accounts are marked inactive and their email is replaced with an invalid-local address; this is not permanent erasure of the account record. Staff audit records store actor and role, action, target identifier, summary, and optional metadata. Other record retention is feature-specific and no overall retention period is configured."]],
+        ["13. Account controls and deletion", ["Users can edit their profile, change a verified email address, change a password, adjust notification preferences, and deactivate an account. Deactivation signs the user out, removes saved jobs, application-tracker entries, community memberships, and personal notifications, and retains an inactive account record. Other profile fields, Google account identifier, notification preferences, and authored community content are not deleted by this operation, so it does not permanently erase every record associated with the account. The application does not provide a data-export feature."]],
+        ["14. Children", ["The codebase does not specify an intended minimum age or a process for handling children's data. The operator must decide and publish an age policy before production use."]],
+        ["15. Changes and contact", ["This page may be updated when Jpedia's actual data handling changes. A public privacy contact address has not been configured in the project. The operator must provide a monitored contact method before production publication."]]
+      ]
+    },
+    "/terms": {
+      title: "Terms of Service", description: "Terms for using Jpedia's job discovery, preparation, resource, and community features.",
+      sections: [
+        ["1. Using Jpedia", ["Jpedia is an informational job-discovery and job-preparation platform. Use of the site means using the public job, board, preparation-resource, account, and community features described here. These terms should be reviewed and approved by the service operator before production publication."]],
+        ["2. Accounts and security", ["Some features require an account. Registration assigns the USER role; elevated AUTHOR, ADMIN, and SUPER_ADMIN access is controlled by the application. Keep sign-in credentials private, use accurate account information, and contact the operator through a published contact channel if you believe an account has been used without permission. The site supports email/password and Google sign-in; phone sign-in is unavailable in production."]],
+        ["3. User conduct and content", ["Community users can create posts and comments, react to posts, join communities, and submit reports. Keep submissions relevant to the community and do not submit content you are not authorized to share, unlawful material, threats, spam, or attempts to disrupt the service. Posts and comments may be removed and reports may be reviewed by moderators or administrators under the application's moderation features."]],
+        ["4. Jobs and official recruitment sources", ["Jpedia is not a government recruiting authority. It presents recruitment information and links to recruiting organizations' websites. Jpedia records job details, source URLs, and application URLs, and may show information supplied by sources or entered by authorized authors and staff. Details, eligibility, deadlines, fees, vacancies, and application instructions can change. Confirm them in the current official notification and apply through the recruiting organization's official site."]],
+        ["5. Discovery and publication", ["Automated recruitment discovery creates records for review; the application does not automatically publish discovered notices. Published job information is subject to the application's author and administrator review workflow, but review does not guarantee that a recruiting organization has not changed its information afterward."]],
+        ["6. Preparation resources and uploads", ["Jpedia provides preparation material links and resources. Authorized authors and staff may upload PDF and supported image files or add external links. Do not upload material unless you have the right to provide it and it is appropriate for the resource category. Resource access follows the displayed link and access mode; a link should not be treated as private unless the application explicitly requires authentication for it."]],
+        ["7. Third-party sites and services", ["Official application links, external resource links, Google sign-in, and uploaded files may involve services operated by third parties. Their sites and services have their own terms and privacy practices. Jpedia does not control the availability or content of external sites."]],
+        ["8. Account status and service availability", ["Users may deactivate their account through account settings. The application also permits authorized staff to manage accounts and content. Jpedia's service depends on its database, hosting, and configured external providers; access or integrations may be unavailable when those services are unavailable or not configured."]],
+        ["9. Service information", ["Job notices, matching results, and preparation resources are provided for informational and organizational use. They are not a substitute for the recruiting organization's current official notice. Check the official source before making application, travel, payment, or preparation decisions."]],
+        ["10. Changes and unresolved legal details", ["The service and these terms may change as Jpedia's features change. The project does not specify a governing-law jurisdiction, registered operating entity, limitation-of-liability language, or public legal contact. Those details require operator and legal review and are intentionally not invented here."]],
+        ["11. Contact", ["A public contact address has not been configured in the project. See the Contact page for the current configuration status; the operator must supply a real monitored contact method before production publication."]]
+      ]
+    },
+    "/about": {
+      title: "About Jpedia", description: "Jpedia brings recruitment information and job-preparation tools together in one place.",
+      sections: [
+        ["Job information and preparation", ["Jpedia is a job-information and job-preparation platform. It presents recruitment notices, board information, application links, and preparation resources so users can explore opportunities and organize next steps."]],
+        ["Tools for account holders", ["Signed-in users can save published jobs, keep an application tracker, manage profile and job preferences, and receive website or configured email notifications. Job recommendations can use profile education, location, and job preferences."]],
+        ["Communities and resources", ["The application includes communities where members can publish posts and comments, and preparation resources that may be uploaded by authorized authors or linked from external sites."]],
+        ["Verify recruitment details", ["Jpedia is not the recruiting authority. Confirm eligibility, dates, fees, and application instructions in the recruiting organization's official notification before applying."]]
+      ]
+    },
+    "/contact": {
+      title: "Contact Jpedia", description: "Contact details for Jpedia are not yet configured for public use.",
+      sections: [
+        ["Public contact details", ["A public support email address, contact form, or postal address is not present in the project configuration. No contact details are published here until the operator supplies an approved, monitored contact method."]],
+        ["Production setup required", ["Before inviting users or submitting Google OAuth branding for production, configure a public contact method and use the same accurate contact details in the site's privacy information and Google OAuth branding."]]
+      ]
+    }
+  };
+  function informationPage() {
+    const content = legalContent[path];
+    document.title = `${content.title} | Jpedia`;
+    const meta = document.querySelector('meta[name="description"]') || document.head.appendChild(Object.assign(document.createElement("meta"), { name: "description" }));
+    meta.content = content.description;
+    root.replaceChildren();
+    const wrap = add(root, "article", "public-page information-page");
+    add(wrap, "p", "public-eyebrow", "JPEDIA");
+    add(wrap, "h1", "", content.title);
+    add(wrap, "p", "public-intro", content.description);
+    content.sections.forEach(([heading, paragraphs]) => {
+      const block = add(wrap, "section", "information-section");
+      add(block, "h2", "", heading);
+      paragraphs.forEach(text => add(block, "p", "", text));
+    });
+  }
   function loginFor(destination) { const to = destination.startsWith("/") && !destination.startsWith("//") ? destination : "/dashboard"; window.location.assign(`/?auth=login&returnTo=${encodeURIComponent(to)}`); }
   async function getUser() { try { return (await api("/users/me")).user; } catch (error) { if (error.status !== 401) throw error; try { await api("/auth/refresh", { method: "POST" }); return (await api("/users/me")).user; } catch { return null; } } }
   function setAccount(user) { const account = document.querySelector("#loginBtn"); if (!account) return; const label = !user ? "Sign in" : user.role === "USER" ? "Dashboard" : `${user.name || "Account"} · ${user.role}`; if (document.body.classList.contains("public-mobile-shell")) { account.replaceChildren(icon("account", "home-account-icon"), document.createTextNode(label)); account.setAttribute("aria-label", label); } else account.textContent = label; account.onclick = () => { if (!user) return loginFor(path); if (user.role === "USER") return window.location.assign("/dashboard"); window.location.assign(user.role === "AUTHOR" ? "/admin/jobs" : "/admin"); }; }
@@ -343,7 +413,7 @@
     cancel.addEventListener("click",()=>dialog.close());deactivate.addEventListener("click",()=>void deactivateAccount());
     const signOut=button(security,"Sign out",async event=>{event.currentTarget.disabled=true;event.currentTarget.textContent="Signing out…";try{await api("/auth/logout",{method:"POST"});setAccount(null);window.location.assign("/?auth=login");}catch(error){event.currentTarget.disabled=false;event.currentTarget.textContent="Sign out";const signOutMessage=status(security);signOutMessage.textContent=error.message||"Could not sign out.";signOutMessage.classList.add("is-error");}},"small-btn");signOut.classList.add("settings-signout");
   }
-  async function start() { try { const user = await getUser(); setAccount(user); if ((userWorkspaceRoute||path==="/services/tracker")&&user&&user.role!=="USER") { location.assign(user.role==="AUTHOR"?"/admin/jobs":"/admin"); return; } if ((userWorkspaceRoute||path==="/services/tracker")&&!user) { loginFor(path); return; }
+  async function start() { if (["/privacy", "/terms", "/about", "/contact"].includes(path)) { setAccount(null); return informationPage(); } try { const user = await getUser(); setAccount(user); if ((userWorkspaceRoute||path==="/services/tracker")&&user&&user.role!=="USER") { location.assign(user.role==="AUTHOR"?"/admin/jobs":"/admin"); return; } if ((userWorkspaceRoute||path==="/services/tracker")&&!user) { loginFor(path); return; }
       if (path === "/jobs") return await jobsPage(user);
       if (path === "/communities") return await communitiesPage(user);
       if (isCommunityDetail) return await communityDetail(user);

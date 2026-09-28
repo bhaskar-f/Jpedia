@@ -92,7 +92,7 @@ app.get(/^\/admin(?:\/.*)?$/, (req, res) =>
   res.sendFile(path.join(frontendRoot, "index.html")),
 );
 app.get(
-  ["/jobs", "/communities", "/notifications", "/faqs", "/dashboard", "/boards", "/profile", "/settings"],
+  ["/jobs", "/communities", "/notifications", "/faqs", "/dashboard", "/boards", "/profile", "/settings", "/privacy", "/terms", "/about", "/contact"],
   (req, res) => res.sendFile(path.join(frontendRoot, "index.html")),
 );
 app.get(/^\/dashboard\/.*$/, (req, res) => res.sendFile(path.join(frontendRoot, "index.html")));

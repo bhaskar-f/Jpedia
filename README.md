@@ -94,7 +94,18 @@ SMS/email delivery honors account notification preferences. File uploads enforce
 
 For local development, use a Google OAuth Web application client with JavaScript origin `http://localhost:3000` and redirect URI `http://localhost:3000/api/auth/google/callback`. Set `CLIENT_ORIGIN` to the actual browser origin and `GOOGLE_CALLBACK_URL` to the exact callback URI registered with Google. Production requires the real HTTPS frontend origin and backend callback URI; do not reuse localhost or add an unselected production domain to configuration.
 
-For a public launch, use a production Google Cloud project/client, set the OAuth audience to **External**, complete app branding with the actual J-Info/Jpedia name, support and developer contact addresses, and add only domains the team owns. Google requires a publicly reachable home page and verified domains; add the actual Privacy Policy and Terms URLs when those pages/domains exist. Do not invent these URLs. The current OAuth request is limited to `profile` and `email` (Google sign-in identity scopes); it does not request Gmail, Drive, or other API access. Google documents basic identity scopes as available to all users when published, while branding/domain requirements still apply. If scopes are added later, review their classification and complete Google verification before production when required.
+For the current Render deployment, configure the Google OAuth Web application client with this authorized JavaScript origin and exact callback URI:
+
+```text
+Authorized JavaScript origin: https://jpedia.onrender.com
+Authorized redirect URI:      https://jpedia.onrender.com/api/auth/google/callback
+```
+
+Set the server-side production environment values `CLIENT_ORIGIN=https://jpedia.onrender.com` and `GOOGLE_CALLBACK_URL=https://jpedia.onrender.com/api/auth/google/callback`. Keep `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` in the server environment; do not place the client secret in frontend code or documentation. The application pages are available at `/privacy`, `/terms`, `/about`, and `/contact` on that host.
+
+When an owned custom Jpedia domain is selected later, replace the authorized JavaScript origin with its exact HTTPS origin and register the corresponding exact callback URI (for example, `https://<owned-host>/api/auth/google/callback`). Update `CLIENT_ORIGIN` and `GOOGLE_CALLBACK_URL` to match, and add the URLs to the Google OAuth client only after the domain is controlled and configured. Do not configure or claim a future domain before then.
+
+For a public launch, use a production Google Cloud project/client, set the OAuth audience to **External**, and complete app branding with the actual Jpedia name and operator-approved support/developer contact addresses. The application source requests only `profile` and `email` (basic sign-in identity scopes); it does not request Gmail, Drive, or other Google API access. Completing this documentation and serving the public pages does not publish the consent screen, verify a domain, or establish Google approval. Complete the required Google Cloud configuration and any branding review in the Console.
 
 The source code cannot publish the consent screen or prove that a Google project is public/verified. In Cloud Console, publish the External app and complete any branding review, use production-only HTTPS origins/redirect URI, then test sign-in with a non-test Google account. Keep OAuth client secrets only in the backend environment.
 
