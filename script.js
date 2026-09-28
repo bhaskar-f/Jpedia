@@ -245,7 +245,10 @@ function setCurrentUser(user) {
       : user.role === "USER"
         ? "Dashboard"
         : `${user.name || "Account"} · ${user.role || "USER"}`;
-    if (document.body.classList.contains("home-page")) {
+    if (
+      document.body.classList.contains("home-page") ||
+      document.body.classList.contains("public-mobile-shell")
+    ) {
       button.replaceChildren(icon("account", "home-account-icon"), document.createTextNode(label));
       button.setAttribute("aria-label", label);
     } else {
@@ -1465,6 +1468,17 @@ if (
 } else if (/^\/(jobs|boards)\//.test(window.location.pathname)) {
   const account = $("#loginBtn");
   if (account) {
+    const setAccountLabel = (label) => {
+      if (document.body.classList.contains("job-details-shell")) {
+        account.replaceChildren(
+          icon("account", "home-account-icon"),
+          document.createTextNode(label),
+        );
+        account.setAttribute("aria-label", label);
+      } else {
+        account.textContent = label;
+      }
+    };
     account.addEventListener("click", async () => {
       let user = null;
       try {
@@ -1487,13 +1501,14 @@ if (
     api("/users/me")
       .then((result) => {
         const user = result.user;
-        account.textContent =
+        setAccountLabel(
           user.role === "USER"
             ? "Dashboard"
-            : `${user.name || "Account"} · ${user.role}`;
+            : `${user.name || "Account"} · ${user.role}`,
+        );
       })
       .catch(() => {
-        account.textContent = "Sign in";
+        setAccountLabel("Sign in");
       });
   }
   document.addEventListener("click", (event) => {

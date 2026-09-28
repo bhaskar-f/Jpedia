@@ -25,7 +25,7 @@ const { requireAuth } = require("./middleware/auth.middleware");
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-app.use(helmet({ contentSecurityPolicy: { directives: { imgSrc: ["'self'", 'data:', 'https:'] } } }));
+app.use(helmet({ contentSecurityPolicy: { directives: { imgSrc: ["'self'", 'data:', 'https:'], frameSrc: ["'self'", 'https://www.youtube.com'] } } }));
 app.use(
   cors({
     origin: env.clientOrigin.split(",").map((x) => x.trim()),
@@ -110,6 +110,7 @@ for (const file of [
   "job-details.js",
   "board-details.js",
   "job-content.js",
+  "youtube-video.js",
   "data.json",
   "logo.png",
   "favicon.png"

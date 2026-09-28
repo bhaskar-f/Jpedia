@@ -1,224 +1,341 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Jpedia brings recruitment information and job-preparation tools together in one place.">
-  <title>jpedia — Job Informations</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=42dot+Sans:wght@300..800&family=Inria+Sans:wght@400;700&family=Mada:wght@400;500;600;700&family=Madimi+One&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css">
-  <link rel="icon" type="image/png" href="/favicon.png">
-</head>
-<body>
-  <div id="adminRoot" hidden></div>
-  <div id="jobDetailRoot" hidden></div>
-  <div id="boardDetailRoot" hidden></div>
-  <header class="site-header">
-    <a class="brand-mark" href="/" aria-label="J-Info home"><img src="logo.png" alt="logo"></a>
-    <nav class="main-nav" aria-label="Main navigation">
-      <a href="/">Home</a>
-      <a href="/jobs">Jobs</a>
-      <a href="/communities">Communities</a>
-      <details class="services-menu">
-        <summary aria-haspopup="true">Services <span aria-hidden="true">▾</span></summary>
-        <div class="services-menu-panel" role="menu">
-          <a role="menuitem" href="/dashboard">My Job Preparation</a>
-          <a role="menuitem" href="/services/preparation">Exam Preparation</a>
-          <a role="menuitem" href="/services/preparation">Study Materials</a>
-          <a role="menuitem" href="/services/eligibility">Eligibility Checker</a>
-          <a role="menuitem" href="/services/tracker">Job Tracker</a>
-          <a role="menuitem" href="/faqs">FAQs</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="description"
+      content="Jpedia brings recruitment information and job-preparation tools together in one place."
+    />
+    <title>jpedia — Job Informations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=42dot+Sans:wght@300..800&family=Inria+Sans:wght@400;700&family=Mada:wght@400;500;600;700&family=Madimi+One&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+  </head>
+  <body>
+    <div id="adminRoot" hidden></div>
+    <div id="jobDetailRoot" hidden></div>
+    <div id="boardDetailRoot" hidden></div>
+    <header class="site-header">
+      <a class="brand-mark" href="/" aria-label="J-Info home"
+        ><img src="/logo.png" alt="Jpedia"
+      /></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/">Home</a>
+        <a href="/jobs">Jobs</a>
+        <a href="/communities">Communities</a>
+        <details class="services-menu">
+          <summary aria-haspopup="true">
+            Services <span aria-hidden="true">▾</span>
+          </summary>
+          <div class="services-menu-panel" role="menu">
+            <a role="menuitem" href="/dashboard">My Job Preparation</a>
+            <a role="menuitem" href="/services/preparation">Exam Preparation</a>
+            <a role="menuitem" href="/services/preparation">Study Materials</a>
+            <a role="menuitem" href="/services/eligibility"
+              >Eligibility Checker</a
+            >
+            <a role="menuitem" href="/services/tracker">Job Tracker</a>
+            <a role="menuitem" href="/faqs">FAQs</a>
+          </div>
+        </details>
+      </nav>
+      <button class="outline-btn login-btn" id="loginBtn" type="button">
+        Sign in / Register
+      </button>
+    </header>
+
+    <main id="publicPageRoot" hidden></main>
+
+    <main id="home" class="page">
+      <section class="hero">
+        <div class="hero-copy">
+          <h1>Don’t get Lost on your Job<br />Preparation</h1>
+          <p>
+            Focus on preparation <span>·</span> Save Your Time
+            <span>·</span> Apply From your Home
+          </p>
         </div>
-      </details>
+        <div class="hero-update">
+          <h3>help us get you updated</h3>
+          <div class="hero-search">
+            <input
+              id="interestInput"
+              type="text"
+              placeholder="What Job Are You Interested in?"
+            />
+            <button id="interestBtn" aria-label="Save job interest">›</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Added without changing the visual language: search/filter block -->
+      <section class="compact-search">
+        <div class="section-title">
+          <span>Find Your Job</span>
+        </div>
+        <form
+          class="search-row"
+          id="jobQuickSearch"
+          action="/jobs"
+          method="get"
+        >
+          <input
+            id="jobSearch"
+            name="q"
+            type="search"
+            placeholder="Search jobs, exams, departments..."
+          />
+          <button class="square-action" id="searchBtn" type="submit">
+            Search
+          </button>
+        </form>
+        <div class="filter-row">
+          <button class="filter-btn" data-filter="all">All</button>
+          <span id="boardFilterButtons"></span>
+        </div>
+      </section>
+
+      <section id="jobs" class="section jobs-section">
+        <div class="section-heading">
+          <a class="arrow-square" href="/jobs" aria-label="Explore all jobs"
+            ><h2>Explore Jobs</h2>
+            <span>›</span></a
+          >
+        </div>
+
+        <div id="jobList" aria-live="polite"></div>
+      </section>
+
+      <!-- Added product workflow -->
+      <section id="workflow" class="section workflow-section">
+        <div class="section-heading">
+          <a
+            class="arrow-square"
+            id="dashboardBtn"
+            href="/dashboard"
+            aria-label="Open My Job Preparation"
+            ><h2>My Job Preparation</h2>
+            <span>›</span></a
+          >
+        </div>
+        <div class="workflow-grid">
+          <div class="workflow-box">
+            <div class="mini-label">SAVED JOBS</div>
+            <strong id="savedCount">0</strong>
+            <span>jobs saved</span>
+          </div>
+          <div class="workflow-box">
+            <div class="mini-label">APPLICATIONS</div>
+            <strong id="applicationCount">0</strong>
+            <span>applications tracked</span>
+          </div>
+          <div class="workflow-box">
+            <div class="mini-label">ALERTS</div>
+            <strong id="alertCount">0</strong>
+            <span>job preferences</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="communities" class="section community-section">
+        <div class="section-heading">
+          <a
+            class="arrow-square"
+            href="/communities"
+            aria-label="Explore all communities"
+          >
+            <h2>Connect With Communities</h2>
+            <span>›</span></a
+          >
+        </div>
+
+        <div class="community-carousel">
+          <button class="carousel-arrow" id="communityPrev">‹</button>
+          <div class="community-viewport">
+            <div class="community-track" id="communityTrack"></div>
+          </div>
+          <button class="carousel-arrow" id="communityNext">›</button>
+        </div>
+      </section>
+
+      <section id="preparation" class="section preparation-section">
+        <div class="section-heading">
+          <a
+            class="arrow-square"
+            href="/services/preparation"
+            aria-label="Explore preparation resources"
+          >
+            <h2>Exam Preparation</h2>
+            <span>›</span></a
+          >
+        </div>
+        <div class="prep-grid" id="preparationList"></div>
+      </section>
+
+      <section id="boardsSection" class="section boards-section">
+        <div class="section-heading">
+          <a class="arrow-square" href="/boards" aria-label="View all boards"
+            ><h2>Government Boards</h2>
+            <span>›</span></a
+          >
+        </div>
+        <div class="boards-row" id="boardsList"></div>
+      </section>
+
+      <section id="updates" class="section updates-section">
+        <div class="section-heading">
+          <a
+            class="arrow-square"
+            href="/notifications"
+            aria-label="Explore notifications"
+            ><h2>Recent Notifications</h2>
+            <span>›</span></a
+          >
+        </div>
+        <div class="updates-box" id="notificationList"></div>
+      </section>
+
+      <section id="tracker" class="section tracker-section">
+        <div class="section-heading">
+          <a
+            class="arrow-square"
+            href="/services/tracker"
+            aria-label="Open application tracker"
+            ><h2>Application Tracker</h2>
+            <span>›</span></a
+          >
+        </div>
+        <div id="trackerList" class="tracker-list">
+          <div class="empty-tracker">
+            No applications tracked yet. Use “More Info” on a job to add one.
+          </div>
+        </div>
+      </section>
+
+      <section class="section alerts-section" id="services">
+        <div class="section-heading">
+          <a
+            class="arrow-square"
+            href="/dashboard#preferences"
+            aria-label="Manage job alerts"
+            ><h2>Job Alerts</h2>
+            <span>›</span></a
+          >
+        </div>
+        <div class="alert-panel">
+          <div>
+            <strong>Tell us what you are preparing for</strong>
+            <p>
+              We'll keep your selected job types together so you don't miss
+              important updates.
+            </p>
+          </div>
+          <div class="alert-controls">
+            <input id="alertInterest" placeholder="SSC CGL, WBCS, Police..." />
+            <button class="small-btn" id="saveAlertBtn">Save</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section eligibility-section">
+        <div class="section-heading">
+          <a
+            class="arrow-square"
+            href="/services/eligibility"
+            aria-label="Open eligibility checker"
+            ><h2>Eligibility Checker</h2>
+            <span>›</span></a
+          >
+        </div>
+        <div class="eligibility-panel eligibility-preview">
+          <p>
+            Check whether you're eligible for a job using the recruitment's
+            available structured criteria.
+          </p>
+          <a class="small-btn" href="/services/eligibility"
+            >Open Eligibility Checker →</a
+          >
+        </div>
+      </section>
+
+      <section id="faqs" class="section faqs-section">
+        <div class="section-heading">
+          <a class="arrow-square" href="/faqs" aria-label="Explore all FAQs">
+            <h2>FAQs</h2>
+            <span>›</span></a
+          >
+        </div>
+        <div id="faqList"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <a class="brand-mark" href="/" aria-label="J-Info home"
+          ><img src="/logo.png" alt="Jpedia"
+        /></a>
+      </div>
+      <div class="footer-links">
+        <a href="/">Home</a><a href="/jobs">Jobs</a
+        ><a href="/communities">Communities</a><a href="/services">Services</a
+        ><a href="/notifications">Notifications</a><a href="/faqs">FAQs</a
+        ><a href="/privacy">Privacy Policy</a
+        ><a href="/terms">Terms of Service</a>
+        <div class="footer-links footer-about-links">
+          <a href="/about">About Jpedia</a><a href="/contact">Contact Us</a>
+        </div>
+      </div>
+      <div class="footer-links">
+        <a href="/services/preparation">Exam Preparation</a
+        ><a href="/services/eligibility">Eligibility Checker</a
+        ><a href="/services/tracker">Application Tracker</a
+        ><a href="/boards">Boards</a>
+      </div>
+      <div class="footer-placeholder">
+        <a class="footer-resource-link" href="/boards"
+          >Browse Government Boards →</a
+        >
+        
+      </div>
+    </footer>
+
+    <nav class="public-legal-links" aria-label="About and legal information">
+      <a href="/about">About</a><a href="/contact">Contact Us</a
+      ><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
     </nav>
-    <button class="outline-btn login-btn" id="loginBtn" type="button">Sign in / Register</button>
-  </header>
 
-  <main id="publicPageRoot" hidden></main>
-
-  <main id="home" class="page">
-
-    <section class="hero">
-      <div class="hero-copy">
-        <h1>Don’t get Lost on your Job<br>Preparation</h1>
-        <p>Focus on preparation <span>·</span> Save Your Time <span>·</span> Apply From your Home</p>
-      </div>
-      <div class="hero-update">
-        <h3>help us get you updated</h3>
-        <div class="hero-search">
-          <input id="interestInput" type="text" placeholder="What Job Are You Interested in?">
-          <button id="interestBtn" aria-label="Save job interest">›</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Added without changing the visual language: search/filter block -->
-    <section class="compact-search">
-      <div class="section-title">
-        <span>Find Your Job</span>
-      </div>
-      <form class="search-row" id="jobQuickSearch" action="/jobs" method="get">
-        <input id="jobSearch" name="q" type="search" placeholder="Search jobs, exams, departments...">
-        <button class="square-action" id="searchBtn" type="submit">Search</button>
-      </form>
-      <div class="filter-row">
-        <button class="filter-btn" data-filter="all">All</button>
-        <span id="boardFilterButtons"></span>
-      </div>
-    </section>
-
-    <section id="jobs" class="section jobs-section">
-      <div class="section-heading">
-        
-        <a class="arrow-square" href="/jobs" aria-label="Explore all jobs"><h2>Explore Jobs</h2><span>›</span></a>
-      </div>
-
-      <div id="jobList" aria-live="polite"></div>
-    </section>
-
-    <!-- Added product workflow -->
-    <section id="workflow" class="section workflow-section">
-      <div class="section-heading">
-        
-        <a class="arrow-square" id="dashboardBtn" href="/dashboard" aria-label="Open My Job Preparation"><h2>My Job Preparation</h2><span>›</span></a>
-      </div>
-      <div class="workflow-grid">
-        <div class="workflow-box">
-          <div class="mini-label">SAVED JOBS</div>
-          <strong id="savedCount">0</strong>
-          <span>jobs saved</span>
-        </div>
-        <div class="workflow-box">
-          <div class="mini-label">APPLICATIONS</div>
-          <strong id="applicationCount">0</strong>
-          <span>applications tracked</span>
-        </div>
-        <div class="workflow-box">
-          <div class="mini-label">ALERTS</div>
-          <strong id="alertCount">0</strong>
-          <span>job preferences</span>
-        </div>
-      </div>
-    </section>
-
-    <section id="communities" class="section community-section">
-      <div class="section-heading">
-       
-        <a class="arrow-square" href="/communities" aria-label="Explore all communities"> <h2>Connect With Communities</h2><span>›</span></a>
-      </div>
-
-      <div class="community-carousel">
-        <button class="carousel-arrow" id="communityPrev">‹</button>
-        <div class="community-viewport">
-          <div class="community-track" id="communityTrack"></div>
-        </div>
-        <button class="carousel-arrow" id="communityNext">›</button>
-      </div>
-    </section>
-
-    <section id="preparation" class="section preparation-section">
-      <div class="section-heading">
-       
-        <a class="arrow-square" href="/services/preparation" aria-label="Explore preparation resources"> <h2>Exam Preparation</h2><span>›</span></a>
-      </div>
-      <div class="prep-grid" id="preparationList"></div>
-    </section>
-
-    <section id="boardsSection" class="section boards-section">
-      <div class="section-heading">
-        
-        <a class="arrow-square" href="/boards" aria-label="View all boards"><h2>Government Boards</h2><span>›</span></a>
-      </div>
-      <div class="boards-row" id="boardsList"></div>
-    </section>
-
-    <section id="updates" class="section updates-section">
-      <div class="section-heading">
-        
-        <a class="arrow-square" href="/notifications" aria-label="Explore notifications"><h2>Recent Notifications</h2><span>›</span></a>
-      </div>
-      <div class="updates-box" id="notificationList"></div>
-    </section>
-
-    <section id="tracker" class="section tracker-section">
-      <div class="section-heading">
-        
-        <a class="arrow-square" href="/services/tracker" aria-label="Open application tracker"><h2>Application Tracker</h2><span>›</span></a>
-      </div>
-      <div id="trackerList" class="tracker-list">
-        <div class="empty-tracker">No applications tracked yet. Use “More Info” on a job to add one.</div>
-      </div>
-    </section>
-
-    <section class="section alerts-section" id="services">
-      <div class="section-heading">
-        
-        <a class="arrow-square" href="/dashboard#preferences" aria-label="Manage job alerts"><h2>Job Alerts</h2><span>›</span></a>
-      </div>
-      <div class="alert-panel">
-        <div>
-          <strong>Tell us what you are preparing for</strong>
-          <p>We'll keep your selected job types together so you don't miss important updates.</p>
-        </div>
-        <div class="alert-controls">
-          <input id="alertInterest" placeholder="SSC CGL, WBCS, Police...">
-          <button class="small-btn" id="saveAlertBtn">Save</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="section eligibility-section">
-      <div class="section-heading">
-        
-        <a class="arrow-square" href="/services/eligibility" aria-label="Open eligibility checker"><h2>Eligibility Checker</h2><span>›</span></a>
-      </div>
-      <div class="eligibility-panel eligibility-preview"><p>Check whether you're eligible for a job using the recruitment's available structured criteria.</p><a class="small-btn" href="/services/eligibility">Open Eligibility Checker →</a></div>
-    </section>
-
-    <section id="faqs" class="section faqs-section">
-      <div class="section-heading">
-       
-        <a class="arrow-square" href="/faqs" aria-label="Explore all FAQs"> <h2>FAQs</h2><span>›</span></a>
-      </div>
-      <div id="faqList"></div>
-    </section>
-
-  </main>
-
-  <footer class="site-footer">
-    <div class="footer-brand">
-      <a class="brand-mark" href="/" aria-label="J-Info home"><img src="logo.png" alt="logo"></a>
+    <div class="back-top-wrap">
+      <button class="back-top" id="backTop" type="button">
+        Back to Top <span>⌃</span>
+      </button>
     </div>
-    <div class="footer-links"><a href="/">Home</a><a href="/jobs">Jobs</a><a href="/communities">Communities</a><a href="/services">Services</a><a href="/notifications">Notifications</a><a href="/faqs">FAQs</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></div>
-    <div class="footer-links"><a href="/services/preparation">Exam Preparation</a><a href="/services/eligibility">Eligibility Checker</a><a href="/services/tracker">Application Tracker</a><a href="/boards">Boards</a></div>
-    <div class="footer-placeholder"><a class="footer-resource-link" href="/boards">Browse Government Boards →</a><div class="footer-links footer-about-links"><a href="/about">About Jpedia</a><a href="/contact">Contact</a></div></div>
-  </footer>
 
-  <nav class="public-legal-links" aria-label="About and legal information">
-    <a href="/about">About</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
-  </nav>
+    <nav
+      class="mobile-bottom-nav"
+      id="mobileBottomNav"
+      aria-label="Mobile navigation"
+    ></nav>
 
-  <div class="back-top-wrap">
-    <button class="back-top" id="backTop" type="button">Back to Top <span>⌃</span></button>
-  </div>
-
-  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile navigation"></nav>
-
-  <div class="modal-backdrop" id="modalBackdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true">
-      <button class="modal-close" id="modalClose">×</button>
-      <div id="modalContent"></div>
+    <div class="modal-backdrop" id="modalBackdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true">
+        <button class="modal-close" id="modalClose">×</button>
+        <div id="modalContent"></div>
+      </div>
     </div>
-  </div>
 
-  <script src="/script.js" defer></script>
-  <script src="/job-content.js" defer></script>
-  <script src="/job-details.js" defer></script>
-  <script src="/board-details.js" defer></script>
-  <script src="/admin.js" defer></script>
-  <script src="/public-pages.js" defer></script>
-</body>
+    <script src="/script.js" defer></script>
+    <script src="/job-content.js" defer></script>
+    <script src="/youtube-video.js" defer></script>
+    <script src="/job-details.js" defer></script>
+    <script src="/board-details.js" defer></script>
+    <script src="/admin.js" defer></script>
+    <script src="/public-pages.js" defer></script>
+  </body>
 </html>
