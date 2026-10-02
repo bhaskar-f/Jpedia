@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/[...path].js": {
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/recruitment",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/application-reminders",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/deadline-notifications",
+      "schedule": "11 2 * * *"
+    },
+    {
+      "path": "/api/cron/expire-jobs",
+      "schedule": "17 1 * * *"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   if (!window.location.pathname.startsWith('/boards/')) return;
   const root = document.querySelector('#boardDetailRoot');
   if (!root) return;
-  const API_BASE = window.JINFO_API_BASE || (window.location.port && window.location.port !== '3000' ? `http://${window.location.hostname}:3000/api` : `${window.location.origin}/api`);
+  const API_BASE = window.JPEDIA_CONFIG?.API_BASE_URL || window.JINFO_API_BASE || `${window.location.origin}/api`;
   const el = (tag, cls = '', text) => { const item = document.createElement(tag); if (cls) item.className = cls; if (text !== undefined) item.textContent = text; return item; };
   const api = async path => {
     const response = await fetch(`${API_BASE}${path}`, { credentials: 'include' });

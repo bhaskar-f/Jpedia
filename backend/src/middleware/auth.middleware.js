@@ -2,10 +2,12 @@ const jwt = require('jsonwebtoken');
 const { env } = require('../config/env');
 const { User } = require('../models');
 const { AppError, asyncHandler } = require('../utils/http');
-const cookieOptions = () => ({ httpOnly: true, secure: env.cookieSecure, sameSite: 'lax', path: '/api/auth', maxAge: env.refreshDays * 86400000 });
-function setAccessCookie(res, token) { res.cookie('jinfo_access', token, { httpOnly: true, secure: env.cookieSecure, sameSite: 'lax', path: '/', maxAge: env.accessTtlMs }); }
-function setRefreshCookie(res, token) { res.cookie('jinfo_refresh', token, cookieOptions()); }
-function clearRefreshCookie(res) { res.clearCookie('jinfo_refresh', { ...cookieOptions(), maxAge: undefined }); }
+const accessCookieOptions = () => ({ httpOnly: true, secure: env.cookieSecure, sameSite: env.cookieSameSite, path: '/', maxAge: env.accessTtlMs });
+const refreshCookieOptions = () => ({ httpOnly: true, secure: env.cookieSecure, sameSite: env.cookieSameSite, path: '/api/auth', maxAge: env.refreshDays * 86400000 });
+function setAccessCookie(res, token) { res.cookie('jinfo_access', token, accessCookieOptions()); }
+function setRefreshCookie(res, token) { res.cookie('jinfo_refresh', token, refreshCookieOptions()); }
+function clearAccessCookie(res) { res.clearCookie('jinfo_access', { ...accessCookieOptions(), maxAge: undefined }); }
+function clearRefreshCookie(res) { res.clearCookie('jinfo_refresh', { ...refreshCookieOptions(), maxAge: undefined }); }
 const optionalAuth = async (req, res, next) => {
   const token = req.cookies?.jinfo_access || req.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return next();
@@ -18,4 +20,4 @@ const requireAuth = asyncHandler(async (req, res, next) => {
   if (!req.user) throw new AppError(401, 'AUTHENTICATION_REQUIRED', 'Sign in to continue.');
   next();
 });
-module.exports = { optionalAuth, requireAuth, setAccessCookie, setRefreshCookie, clearRefreshCookie };
+module.exports = { optionalAuth, requireAuth, setAccessCookie, setRefreshCookie, clearAccessCookie, clearRefreshCookie };

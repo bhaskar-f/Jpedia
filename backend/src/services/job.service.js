@@ -52,20 +52,29 @@ function rankRelated(current, candidates, limit = 3) {
   return candidates.filter(item => String(item._id) !== String(current._id) && item.status === 'PUBLISHED')
     .sort((a,b) => score(b)-score(a)).slice(0, Math.min(3, limit));
 }
-function makeSlug(title) { return `${slugify(title)}-${Date.now().toString(36)}`; }
+function makeSlug(title) {
+  const value = String(title || '').trim();
+  return value ? `${slugify(value)}-${Date.now().toString(36)}` : `draft-${new mongoose.Types.ObjectId().toString()}`;
+}
 async function create(input, user) {
   const postIds = new Set((input.posts || []).map(post => String(post._id || '')).filter(Boolean));
   for (const field of input.conditionalFields || []) for (const entry of field.entries || []) if (entry.postId && !postIds.has(String(entry.postId))) throw new AppError(400, 'INVALID_CONDITIONAL_POST', 'Conditional values must reference a post included in this recruitment.');
   if (input.howToApplyYoutubeUrl && !isYoutubeUrl(input.howToApplyYoutubeUrl)) throw new AppError(400, 'INVALID_YOUTUBE_URL', 'Use a YouTube URL for how-to-apply videos.');
   const board = input.board ? await Board.findById(input.board) : null; if (input.board && !board) throw new AppError(400, 'INVALID_BOARD', 'Board does not exist.');
   const created=await Job.create({ ...input, board: board?._id, boardName: board?.name, slug: makeSlug(input.title), author: user._id, status: 'DRAFT', verificationStatus: 'UNVERIFIED' });
-  AuditLog.create({actor:user._id,actorRole:user.role,action:'job.created',targetType:'Job',targetId:String(created._id),summary:`Created draft ${created.title}`}).catch(()=>{});return created;
+  AuditLog.create({actor:user._id,actorRole:user.role,action:'job.created',targetType:'Job',targetId:String(created._id),summary:`Created draft ${created.title || 'Untitled Draft'}`}).catch(()=>{});return created;
 }
 async function update(jobId, input, user) {
   const job = await Job.findById(jobId); if (!job) throw new AppError(404, 'JOB_NOT_FOUND', 'Job not found.');
   if (user.role === 'AUTHOR' && String(job.author) !== String(user._id)) throw new AppError(403, 'FORBIDDEN', 'Authors can edit only their own jobs.');
   if (user.role === 'AUTHOR' && job.status !== 'DRAFT' && job.status !== 'REJECTED') throw new AppError(409, 'JOB_LOCKED', 'Only draft or rejected jobs may be edited.');
   if(input.howToApplyYoutubeUrl&&!isYoutubeUrl(input.howToApplyYoutubeUrl))throw new AppError(400,'INVALID_YOUTUBE_URL','Use a YouTube URL for how-to-apply videos.');
+  if (['PUBLISHED', 'EXPIRED'].includes(job.status)) {
+    const nextTitle = Object.prototype.hasOwnProperty.call(input, 'title') ? input.title : job.title;
+    const nextOrganization = Object.prototype.hasOwnProperty.call(input, 'organization') ? input.organization : job.organization;
+    if (!nextTitle?.trim() || !nextOrganization?.trim())
+      throw new AppError(400, 'JOB_METADATA_REQUIRED', 'Published jobs must keep a job title and recruiting organization.');
+  }
   const postIds = new Set((input.posts || job.posts || []).map(post => String(post._id || post._id?.toString?.() || '')).filter(Boolean));
   for (const field of input.conditionalFields || []) for (const entry of field.entries || []) if (entry.postId && !postIds.has(String(entry.postId))) throw new AppError(400, 'INVALID_CONDITIONAL_POST', 'Conditional values must reference a post included in this recruitment.');
   const hasBoard = Object.prototype.hasOwnProperty.call(input, 'board');
@@ -79,12 +88,17 @@ async function submitReview(jobId, user) {
   const job = await Job.findById(jobId); if (!job) throw new AppError(404, 'JOB_NOT_FOUND', 'Job not found.');
   if (!['ADMIN','SUPER_ADMIN'].includes(user.role) && String(job.author) !== String(user._id)) throw new AppError(403, 'FORBIDDEN', 'You cannot submit this job.');
   if (!['DRAFT','REJECTED'].includes(job.status)) throw new AppError(409, 'INVALID_WORKFLOW', 'Only draft or rejected jobs can be submitted.');
+  const documentText = (nodes = []) => nodes.reduce((text, node) => text + (node.text || '') + documentText(node.content || []), '');
+  const hasArticle = documentText(job.contentDocument || []).trim() || job.description?.trim() || (job.contentBlocks || []).length || (job.contentSections || []).some(section => section.blocks?.length);
+  if (!hasArticle) throw new AppError(400, 'JOB_CONTENT_REQUIRED', 'Add article content before submitting for review.');
   job.status = 'PENDING_REVIEW'; job.rejectionReason = undefined; await job.save();
   AuditLog.create({actor:user._id,actorRole:user.role,action:'job.submitted',targetType:'Job',targetId:String(job._id),summary:`Submitted ${job.title} for review`}).catch(()=>{});return job;
 }
 async function review(jobId, reviewer, action, reason) {
   const job = await Job.findById(jobId); if (!job) throw new AppError(404, 'JOB_NOT_FOUND', 'Job not found.');
   if (job.status !== 'PENDING_REVIEW' && !(action === 'publish' && job.status === 'APPROVED') && action !== 'unpublish') throw new AppError(409, 'INVALID_WORKFLOW', 'Job is not pending review or approved.');
+  if (['approve', 'publish'].includes(action) && (!job.title?.trim() || !job.organization?.trim()))
+    throw new AppError(400, 'JOB_METADATA_REQUIRED', 'Add a job title and recruiting organization before approving or publishing.');
   job.reviewedBy = reviewer._id;
   job.reviewedAt = new Date();
   if (action === 'approve') job.status = 'APPROVED';

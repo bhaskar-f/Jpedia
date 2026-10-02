@@ -5,8 +5,8 @@ const bcrypt = require('bcryptjs');
 
 const definitions = [
   { prefix: 'SUPER_ADMIN', role: 'SUPER_ADMIN', label: 'Super Admin', defaultName: 'System Administrator' },
-  { prefix: 'ADMIN', role: 'ADMIN', label: 'Admin', defaultName: 'J-Info Development Admin', phoneKey: 'ADMIN_MOBILE' },
-  { prefix: 'AUTHOR', role: 'AUTHOR', label: 'Author', defaultName: 'J-Info Development Author', phoneKey: 'AUTHOR_MOBILE', developmentEmailOnly: true },
+  { prefix: 'ADMIN', role: 'ADMIN', label: 'Admin', defaultName: 'SetBGet Development Admin', phoneKey: 'ADMIN_MOBILE' },
+  { prefix: 'AUTHOR', role: 'AUTHOR', label: 'Author', defaultName: 'SetBGet Development Author', phoneKey: 'AUTHOR_MOBILE', developmentEmailOnly: true },
 ];
 const emailPattern = /^\S+@\S+\.\S+$/;
 const phonePattern = /^\+[1-9]\d{7,14}$/;

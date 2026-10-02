@@ -1,10 +1,11 @@
 const express = require("express");
+const path = require("path");
 const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit").rateLimit;
+const { MongoRateLimitStore } = require("./middleware/mongo-rate-limit.store");
 const passport = require("passport");
-const path = require("path");
 const { env } = require("./config/env");
 const mongoSanitize = require("express-mongo-sanitize");
 const { validate } = require("./middleware/validate.middleware");
@@ -19,19 +20,17 @@ const resourceRoutes = require("./routes/resource.routes");
 const adminRoutes = require("./routes/admin.routes");
 const authorAssetRoutes = require("./routes/authorAsset.routes");
 const contentRoutes = require("./routes/content.routes");
+const cronRoutes = require("./routes/cron.routes");
 const { notFound, errorHandler } = require("./middleware/error.middleware");
 const { asyncHandler, success } = require("./utils/http");
 const { requireAuth } = require("./middleware/auth.middleware");
+const healthController = require("./controllers/health.controller");
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(helmet({ contentSecurityPolicy: { directives: { imgSrc: ["'self'", 'data:', 'https:'], frameSrc: ["'self'", 'https://www.youtube.com'] } } }));
-app.use(
-  cors({
-    origin: env.clientOrigin.split(",").map((x) => x.trim()),
-    credentials: true,
-  }),
-);
+const { createCorsOptions } = require("./config/cors");
+app.use(cors(createCorsOptions(env.clientOrigins)));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 app.use(mongoSanitize());
@@ -42,13 +41,13 @@ app.use(
   rateLimit({
     windowMs: 60 * 1000,
     limit: 180,
+    store: new MongoRateLimitStore('api'),
     standardHeaders: "draft-7",
     legacyHeaders: false,
   }),
 );
-app.get("/api/health", (req, res) =>
-  success(res, { status: "ok", timestamp: new Date().toISOString() }),
-);
+app.get("/api/health", healthController.health);
+app.use("/api/cron", cronRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/jobs", jobRoutes);
@@ -84,42 +83,16 @@ app.post(
   ),
   asyncHandler(require("./controllers/account.controller").createGlobal),
 );
-const frontendRoot = path.resolve(__dirname, "../..");
-app.get(["/", "/index.html"], (req, res) =>
-  res.sendFile(path.join(frontendRoot, "index.html")),
-);
-app.get(/^\/admin(?:\/.*)?$/, (req, res) =>
-  res.sendFile(path.join(frontendRoot, "index.html")),
-);
-app.get(
-  ["/jobs", "/communities", "/notifications", "/faqs", "/dashboard", "/boards", "/profile", "/settings", "/privacy", "/terms", "/about", "/contact"],
-  (req, res) => res.sendFile(path.join(frontendRoot, "index.html")),
-);
-app.get(/^\/dashboard\/.*$/, (req, res) => res.sendFile(path.join(frontendRoot, "index.html")));
-app.get(/^\/services(?:\/.*)?$/, (req, res) =>
-  res.sendFile(path.join(frontendRoot, "index.html")),
-);
-app.get(/^\/(?:jobs|boards|communities)\/[^/]+$/, (req, res) =>
-  res.sendFile(path.join(frontendRoot, "index.html")),
-);
-for (const file of [
-  "style.css",
-  "script.js",
-  "admin.js",
-  "public-pages.js",
-  "job-details.js",
-  "board-details.js",
-  "job-content.js",
-  "youtube-video.js",
-  "data.json",
-  "logo.png",
-  "favicon.png"
-])
-  app.get(`/${file}`, (req, res) =>
-    res.sendFile(path.join(frontendRoot, file)),
-  );
-for (const file of ["qualification-taxonomy.json", "job-taxonomy.json", "india-locations.json"])
-  app.get(`/data/${file}`, (req, res) => res.sendFile(path.join(__dirname, "data", file)));
+// Keep the legacy/local combined experience available. Vercel's API project
+// sets VERCEL=1 and never serves frontend files.
+if (process.env.VERCEL !== "1") {
+  const frontendRoot = path.resolve(__dirname, "../../frontend");
+  app.use(express.static(frontendRoot, { index: false }));
+  app.get(["/", "/index.html", /^\/(?:admin|dashboard|jobs|boards|communities|services)(?:\/.*)?$/, "/profile", "/settings", "/notifications", "/faqs", "/privacy", "/terms", "/about", "/contact"], (req, res) => res.sendFile(path.join(frontendRoot, "index.html")));
+  app.get("/data.json", (req, res) => res.sendFile(path.join(__dirname, "data", "seed.json")));
+  for (const file of ["qualification-taxonomy.json", "job-taxonomy.json", "india-locations.json"])
+    app.get(`/data/${file}`, (req, res) => res.sendFile(path.join(__dirname, "data", file)));
+}
 app.use(notFound);
 app.use(errorHandler);
 module.exports = app;

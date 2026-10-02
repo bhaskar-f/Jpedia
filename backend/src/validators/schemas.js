@@ -48,7 +48,27 @@ const blockData = {
   youtube: z.object({ url: z.string().url().refine(value=>{const host=new URL(value).hostname.toLowerCase();return host==='youtu.be'||host==='youtube.com'||host.endsWith('.youtube.com');},'URL must belong to YouTube'), caption: shortText(500).optional() }).strict(),
 };
 const contentBlock = z.discriminatedUnion('type', Object.entries(blockData).map(([type,data]) => z.object({ type: z.literal(type), data }).strict()));
+const documentNode = z.lazy(() => z.object({
+  type: z.enum(['p','h1','h2','h3','ul','ol','li','table','thead','tbody','tr','th','td','blockquote','hr','strong','em','u','s','a','span','div','br']),
+  text: z.string().max(20000).optional(),
+  attrs: z.object({ id:z.string().regex(/^heading-[a-z0-9-]{1,80}$/).optional(), href:z.string().url().refine(value=>['http:','https:'].includes(new URL(value).protocol),'URL must use HTTP or HTTPS').optional(), align:z.enum(['left','center','right']).optional() }).strict().optional(),
+  content: z.array(documentNode).max(500).optional(),
+}).strict());
+const documentNodes = z.array(documentNode).max(2000).superRefine((nodes,ctx)=>{
+  let size=0,count=0;
+  const inspect=(items,parent='',depth=0,tableState=null,path=[])=>items.forEach((item,index)=>{
+    const here=[...path,index];size+=(item.text||'').length;count++;
+    if(depth>40)ctx.addIssue({code:z.ZodIssueCode.custom,path:here,message:'Document nesting is too deep.'});
+    const allowed={table:['thead','tbody','tr'],thead:['tr'],tbody:['tr'],tr:['th','td'],ul:['li'],ol:['li']};
+    if(allowed[parent]&&!allowed[parent].includes(item.type))ctx.addIssue({code:z.ZodIssueCode.custom,path:here,message:`Invalid ${parent} structure.`});
+    if(item.type==='table')tableState={width:null};
+    if(item.type==='tr'&&tableState){const width=item.content?.length||0;if(tableState.width!=null&&tableState.width!==width)ctx.addIssue({code:z.ZodIssueCode.custom,path:here,message:'Every table row must have the same number of cells.'});tableState.width=width;}
+    if(item.content)inspect(item.content,item.type,depth+1,tableState,here);
+  });
+  inspect(nodes);if(size>500000)ctx.addIssue({code:z.ZodIssueCode.custom,message:'Document text exceeds 500,000 characters.'});if(count>10000)ctx.addIssue({code:z.ZodIssueCode.custom,message:'Document contains too many nested nodes.'});
+});
 const job = jobBase.extend({
+  contentDocument: documentNodes.optional(),
   importantDates: z.array(dateRow).max(100).optional(), vacancyBreakdown: z.array(vacancyRow).max(100).optional(),
   ageCutoffDate: z.coerce.date().optional(), ageDescription: shortText(1000).optional(), ageRelaxations: z.array(ageRelaxation).max(50).optional(),
   applicationFees: z.array(feeRow).max(50).optional(), qualifications: z.array(qualificationRow).max(50).optional(), selectionStages: z.array(selectionStage).max(50).optional(),
@@ -59,6 +79,10 @@ const job = jobBase.extend({
   importantInstructions: z.array(z.object({ text: shortText(2000), category: shortText(120).optional() }).strict()).max(100).optional(),
   posts: z.array(jobPost).max(100).optional(), postGroups: z.array(z.object({ name: shortText(120), description: shortText(500).optional(), totalVacancies: z.number().int().nonnegative().optional() }).strict()).max(50).optional(),
 });
+const jobDraft = job.extend({
+  title: z.string().trim().max(200).optional(),
+  organization: z.string().trim().max(200).optional(),
+});
 const application = z.object({ job: id, status: z.enum(['NOT_APPLIED','APPLIED','ADMIT_CARD','EXAM_SCHEDULED','EXAM_COMPLETED','RESULT','INTERVIEW','SELECTED','REJECTED']).optional(), appliedAt: z.coerce.date().optional(), examDate: z.coerce.date().optional(), result: z.string().max(500).optional(), notes: z.string().max(3000).optional(), reminderDate: z.coerce.date().optional() }).strict();
 const applicationUpdate = application.omit({job:true}).strict();
 const board = z.object({name:z.string().trim().min(2).max(120),slug:z.string().trim().min(2).max(120).optional(),shortDescription:z.string().max(300).optional(),description:z.string().max(10000).optional(),about:z.string().max(10000).optional(),organization:z.string().max(160).optional(),category:z.string().max(100).optional(),officialWebsite:url,officialNotificationWebsite:url,location:z.string().max(160).optional(),icon:z.string().max(500).optional(),active:z.boolean().optional()}).strict();
@@ -68,4 +92,4 @@ const validateResource = (value, ctx) => { const external=value.sourceType==='EX
 const resource = resourceBase.superRefine(validateResource);
 const resourcePatch = resourceBase.partial().superRefine(validateResource);
 const authorAsset = z.object({ name: z.string().trim().min(2).max(120), description: z.string().max(500).optional(), data: z.record(z.unknown()).optional() }).strict();
-module.exports = { id, register, login, profile, verifyEmail, forgotPassword, resetPassword, changePassword, sendOtp, verifyOtp, phoneLogin, job, application, applicationUpdate, board, community, resource, resourcePatch, authorAsset };
+module.exports = { id, register, login, profile, verifyEmail, forgotPassword, resetPassword, changePassword, sendOtp, verifyOtp, phoneLogin, job, jobDraft, application, applicationUpdate, board, community, resource, resourcePatch, authorAsset };

@@ -1,0 +1,20 @@
+{
+  "label": "Job-matching qualification taxonomy",
+  "source": "UGC specified degree nomenclature, supplemented with common certificate, school, diploma, and professional qualification labels for matching only.",
+  "levels": [
+    {"id":"BELOW_10TH","label":"Below 10th","degrees":[]},
+    {"id":"CLASS_10","label":"10th / Matriculation","degrees":["Class 10","Matriculation","Secondary School Certificate"]},
+    {"id":"CLASS_12","label":"12th / Higher Secondary","degrees":["Class 12","Higher Secondary","Intermediate","10+2"]},
+    {"id":"ITI","label":"ITI","degrees":["ITI","National Trade Certificate","Craftsmen Training Certificate"]},
+    {"id":"CERTIFICATE","label":"Certificate","degrees":["Certificate","Vocational Certificate","Paramedical Certificate"]},
+    {"id":"DIPLOMA","label":"Diploma","degrees":["Diploma","Polytechnic Diploma","D.El.Ed","GNM","ANM"]},
+    {"id":"ADVANCED_DIPLOMA","label":"Advanced Diploma","degrees":["Advanced Diploma","Post Diploma"]},
+    {"id":"BACHELORS","label":"Undergraduate / Bachelor's","degrees":["BA","BSc","BCom","BBA","BCA","BE","BTech","BSW","BJMC","BFA","BDes","BArch","LLB","BEd","BPharm","BPT","MBBS","BDS","BAMS","BHMS","BUMS","BSc Nursing","BSc Agriculture","BVSc","BHM","B.Voc","B.El.Ed"]},
+    {"id":"MASTERS","label":"Postgraduate / Master's","degrees":["MA","MSc","MCom","MBA","MCA","ME","MTech","MSW","MJMC","MFA","MDes","MArch","LLM","MEd","MPharm","MPT","MD","MS","MDS","MSc Nursing","MSc Agriculture","MVSc","MHM","M.Voc"]},
+    {"id":"PG_DIPLOMA","label":"Postgraduate Diploma","degrees":["PG Diploma","PGDM","Postgraduate Diploma"]},
+    {"id":"PROFESSIONAL","label":"Professional Degree","degrees":["CA","CMA","CS","CFA","CWA","Integrated BA LLB","Integrated BBA LLB","Integrated BSc LLB","MBBS","BDS","BAMS","BHMS","BUMS","BArch"]},
+    {"id":"DOCTORAL","label":"Doctoral / PhD","degrees":["PhD","DPhil","DSc","DLitt","LLD"]},
+    {"id":"OTHER","label":"Other recognized qualification","degrees":["Other"]}
+  ],
+  "fields": ["Arts and Humanities","English","Languages","History","Political Science","Sociology","Psychology","Economics","Geography","Social Work","Journalism and Mass Communication","Fine Arts","Science","Physics","Chemistry","Mathematics","Statistics","Biology","Computer Science","Information Technology","Commerce","Accounting","Finance","Management","Engineering","Civil Engineering","Mechanical Engineering","Electrical Engineering","Electronics and Communication","Law","Medicine","Dentistry","Ayurveda","Homeopathy","Unani Medicine","Physiotherapy","Pharmacy","Nursing","Allied Health","Education","Agriculture","Veterinary Science","Architecture","Planning","Design","Library and Information Science","Environment and Forestry","Research"]
+}

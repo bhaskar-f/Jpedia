@@ -1,6 +1,8 @@
-# j-info platform
+# SetBGet
 
-A narrow, monochrome job and exam preparation frontend with a layered Express/Mongoose REST API.
+**set become and get**
+
+SetBGet is a job and exam preparation platform with a monochrome frontend and Express/Mongoose REST API.
 
 ## Requirements
 
@@ -12,10 +14,9 @@ A narrow, monochrome job and exam preparation frontend with a layered Express/Mo
 
 ```sh
 npm install
-cp .env.example .env
 ```
 
-Set `MONGODB_URI`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, and the client origin in `.env`. Use two distinct random secrets of at least 32 characters. The server fails early if either JWT secret is missing and rejects example secret placeholders in production. Optional integrations stay disabled until their credentials are configured. Never commit `.env`.
+For local development, create `.env` with `NODE_ENV=development`, `MONGODB_URI`, `JWT_SECRET`, and `JWT_REFRESH_SECRET`. Use two distinct random secrets of at least 32 characters. `backend/.env.example` is the local backend template; `.env.example` documents the production backend shape. Never commit `.env`.
 
 ```sh
 npm run dev
@@ -23,7 +24,21 @@ npm run dev
 npm start
 ```
 
-The Express app serves the existing frontend at `http://localhost:3000/` and APIs under `/api`. If running the frontend separately (for example, VS Code Live Server), add its exact origin to comma-separated `CLIENT_ORIGIN` and use same-site localhost hostnames for cookie authentication.
+The Express app serves the root-level frontend locally and on the retained Render fallback at `http://localhost:3000/`. The split frontend may instead be built and served on port 5500; configure the backend `CLIENT_ORIGINS=http://localhost:5500` and frontend `PUBLIC_API_BASE_URL=http://localhost:3000/api` for that setup.
+
+## Vercel deployment preparation
+
+The frontend stays plain HTML/CSS/JavaScript. Vercel now uses two project roots: `frontend/` for the static frontend and `backend/` for the Express API Function and Cron configuration. See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for exact project settings, environment variables, provider setup, and preview strategy. The root project files and Render configuration remain as a temporary combined-app fallback.
+
+Do not import the repository root as the new Vercel project. Create one project per subdirectory and keep all credentials in the backend project only. The migration has not been deployed and Render remains available as the backup.
+
+Vercel Cron uses UTC and invokes production deployments only. Recruitment runs daily at 03:00 UTC; the reminder, deadline-notice, and expiry tasks retain their existing intervals. Hobby permits at most one run per day for each cron job, so the 15-minute reminder requires a plan that supports more frequent schedules. Vercel sends `Authorization: Bearer $CRON_SECRET`; the application fails closed if the secret is missing or invalid. Configure the secret in the backend project.
+
+Resource files continue to allow PDF and image formats up to 15 MB. The admin uploader requests a short-lived signed Cloudinary upload, sends the file directly to Cloudinary, then asks Express to verify the signed asset and save its metadata. This avoids Vercel Function's 4.5 MB request-body limit. No uploaded file is persisted on the Vercel filesystem.
+
+Before switching production traffic, configure MongoDB Atlas Network Access for the Vercel Function's outbound connectivity, and ensure the database user has the privileges needed for application collections, Atlas Search, rate-limit counters, and scheduled-task locks. Vercel egress IPs are dynamic unless Static IPs or Secure Compute are configured; use the appropriate Vercel connectivity option if Atlas requires IP allowlisting. Static IPs are available on Pro/Enterprise, while Secure Compute is Enterprise. Do not open Atlas to all addresses solely to avoid configuring egress access.
+
+Set `CLIENT_ORIGINS` to the exact allowed frontend HTTPS origin(s) and `GOOGLE_CALLBACK_URL` to the backend origin plus `/api/auth/google/callback`. Keep the existing Render origin and callback registered in Google Cloud during the backup period. Set Gmail App Password SMTP values and Cloudinary API values only in the Vercel backend environment. The repository is prepared for deployment but has not been deployed or connected to these providers.
 
 Seed/update boards, jobs, communities, preparation resources, eligible global notifications, and FAQs from the current `data.json`:
 
@@ -41,7 +56,7 @@ Run the bootstrap unit suite with `npm test`.
 
 ## Authentication and roles
 
-Email/password accounts use bcrypt password hashes, single-use expiring verification/reset tokens, short-lived access JWT cookies, and rotating refresh JWT cookies. Google OAuth uses Passport and the Express callback. Phone sign-in is presented as Coming Soon; phone login, OTP, and phone-password endpoints return `503` in production. No Twilio configuration is required to run the application. Cookies are HTTP-only, SameSite=Lax, and Secure when `COOKIE_SECURE=true`.
+Email/password accounts use bcrypt password hashes, single-use expiring verification/reset tokens, short-lived access JWT cookies, and rotating refresh JWT cookies. Google OAuth uses Passport and the Express callback. Phone sign-in is presented as Coming Soon; phone login, OTP, and phone-password endpoints return `503` in production. No Twilio configuration is required to run the application. Cookies are HTTP-only, API-host scoped, Secure in production, and use `SameSite=None` for separate frontend/API origins.
 
 Roles are `USER`, `AUTHOR`, `ADMIN`, and `SUPER_ADMIN`; registration always assigns `USER`. Authors can manage their own drafts/resources and submit jobs for review. Admins moderate and publish. Only Super Admin can assign or remove elevated admin roles. The backend checks ownership and roles independently of the frontend.
 
@@ -92,20 +107,13 @@ SMS/email delivery honors account notification preferences. File uploads enforce
 
 ### Google OAuth deployment
 
-For local development, use a Google OAuth Web application client with JavaScript origin `http://localhost:3000` and redirect URI `http://localhost:3000/api/auth/google/callback`. Set `CLIENT_ORIGIN` to the actual browser origin and `GOOGLE_CALLBACK_URL` to the exact callback URI registered with Google. Production requires the real HTTPS frontend origin and backend callback URI; do not reuse localhost or add an unselected production domain to configuration.
+For split-origin local development, use a Google OAuth Web application client with authorized JavaScript origin `http://localhost:5500` and redirect URI `http://localhost:3000/api/auth/google/callback`. Set `CLIENT_ORIGINS` to the actual browser origin and `GOOGLE_CALLBACK_URL` to the exact backend callback URI registered with Google. Production requires the real HTTPS frontend origin and backend callback URI; do not reuse localhost or add an unselected production domain to configuration.
 
-For the current Render deployment, configure the Google OAuth Web application client with this authorized JavaScript origin and exact callback URI:
+For the current Render backup, keep its existing authorized JavaScript origin and exact callback URI registered until Vercel production is verified. For Vercel, register the frontend authorized JavaScript origin and the API backend callback `<api-vercel-origin>/api/auth/google/callback`, then set `CLIENT_ORIGINS` and `GOOGLE_CALLBACK_URL` in the backend environment. Keep OAuth secrets server-side. The application pages are available at `/privacy`, `/terms`, `/about`, and `/contact` on the frontend origin.
 
-```text
-Authorized JavaScript origin: https://jpedia.onrender.com
-Authorized redirect URI:      https://jpedia.onrender.com/api/auth/google/callback
-```
+When an owned custom SetBGet domain is selected later, register its exact HTTPS frontend origin and separately register the API callback URI (for example, `https://<api-host>/api/auth/google/callback`). Update `CLIENT_ORIGINS` and `GOOGLE_CALLBACK_URL` to match, and add the URLs to Google only after those domains are controlled and configured.
 
-Set the server-side production environment values `CLIENT_ORIGIN=https://jpedia.onrender.com` and `GOOGLE_CALLBACK_URL=https://jpedia.onrender.com/api/auth/google/callback`. Keep `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` in the server environment; do not place the client secret in frontend code or documentation. The application pages are available at `/privacy`, `/terms`, `/about`, and `/contact` on that host.
-
-When an owned custom Jpedia domain is selected later, replace the authorized JavaScript origin with its exact HTTPS origin and register the corresponding exact callback URI (for example, `https://<owned-host>/api/auth/google/callback`). Update `CLIENT_ORIGIN` and `GOOGLE_CALLBACK_URL` to match, and add the URLs to the Google OAuth client only after the domain is controlled and configured. Do not configure or claim a future domain before then.
-
-For a public launch, use a production Google Cloud project/client, set the OAuth audience to **External**, and complete app branding with the actual Jpedia name and operator-approved support/developer contact addresses. The application source requests only `profile` and `email` (basic sign-in identity scopes); it does not request Gmail, Drive, or other Google API access. Completing this documentation and serving the public pages does not publish the consent screen, verify a domain, or establish Google approval. Complete the required Google Cloud configuration and any branding review in the Console.
+For a public launch, use a production Google Cloud project/client, set the OAuth audience to **External**, and complete app branding with the actual SetBGet name and operator-approved support/developer contact addresses. The application source requests only `profile` and `email` (basic sign-in identity scopes); it does not request Gmail, Drive, or other Google API access. Completing this documentation and serving the public pages does not publish the consent screen, verify a domain, or establish Google approval. Complete the required Google Cloud configuration and any branding review in the Console.
 
 The source code cannot publish the consent screen or prove that a Google project is public/verified. In Cloud Console, publish the External app and complete any branding review, use production-only HTTPS origins/redirect URI, then test sign-in with a non-test Google account. Keep OAuth client secrets only in the backend environment.
 

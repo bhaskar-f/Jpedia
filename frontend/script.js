@@ -1,10 +1,6 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const API_BASE =
-  window.JINFO_API_BASE ||
-  (window.location.port && window.location.port !== "3000"
-    ? `http://${window.location.hostname}:3000/api`
-    : `${window.location.origin}/api`);
+const API_BASE = window.JPEDIA_CONFIG?.API_BASE_URL || window.JINFO_API_BASE || `${window.location.origin}/api`;
 const state = {
   data: null,
   saved: readStorage("jinfo_saved"),
@@ -264,8 +260,8 @@ function renderAuth(mode = "login", options = {}) {
   const content = $("#modalContent");
   content.replaceChildren();
   const titles = {
-    login: "Login to J-Info",
-    register: "Create your J-Info account",
+    login: "Login to SetBGet",
+    register: "Create your SetBGet account",
     forgot: "Forgot password?",
     otp: "Sign in with mobile OTP",
     reset: "Reset your password",

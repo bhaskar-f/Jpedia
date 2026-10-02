@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const authRoutes = require('../routes/auth.routes');
 const { randomToken, hashToken } = require('../utils/tokens');
 const { env } = require('../config/env');
-const { setAccessCookie, setRefreshCookie } = require('../middleware/auth.middleware');
+const { setAccessCookie, setRefreshCookie, clearAccessCookie, clearRefreshCookie } = require('../middleware/auth.middleware');
 
 test('email authentication and recovery routes are registered', () => {
   const routes = authRoutes.stack
@@ -69,8 +69,63 @@ test('authentication cookies remain HTTP-only with correct paths and secure mode
       }
       assert.equal(written[0].options.path, '/');
       assert.equal(written[1].options.path, '/api/auth');
+      assert.equal(written[0].options.maxAge, env.accessTtlMs);
+      assert.equal(written[1].options.maxAge, env.refreshDays * 86400000);
     }
   } finally {
     env.cookieSecure = oldSecure;
+  }
+});
+
+test('cross-origin production cookies remain HTTP-only, Secure, host-scoped, and SameSite=None', () => {
+  const oldSecure = env.cookieSecure;
+  const oldSameSite = env.cookieSameSite;
+  try {
+    env.cookieSecure = true;
+    env.cookieSameSite = 'none';
+    const written = [];
+    const response = { cookie: (name, value, options) => written.push({ name, options }) };
+    setAccessCookie(response, 'access-token-test');
+    setRefreshCookie(response, 'refresh-token-test');
+    assert.equal(written.length, 2);
+    for (const cookie of written) {
+      assert.equal(cookie.options.httpOnly, true);
+      assert.equal(cookie.options.secure, true);
+      assert.equal(cookie.options.sameSite, 'none');
+      assert.equal(Object.hasOwn(cookie.options, 'domain'), false);
+    }
+    assert.equal(written[0].options.path, '/');
+    assert.equal(written[0].options.maxAge, env.accessTtlMs);
+    assert.equal(written[1].options.path, '/api/auth');
+    assert.equal(written[1].options.maxAge, env.refreshDays * 86400000);
+  } finally {
+    env.cookieSecure = oldSecure;
+    env.cookieSameSite = oldSameSite;
+  }
+});
+
+test('cookie clearing keeps the original host, security, and path attributes', () => {
+  const oldSecure = env.cookieSecure;
+  const oldSameSite = env.cookieSameSite;
+  try {
+    env.cookieSecure = true;
+    env.cookieSameSite = 'none';
+    const cleared = [];
+    const response = { clearCookie: (name, options) => cleared.push({ name, options }) };
+    clearAccessCookie(response);
+    clearRefreshCookie(response);
+    assert.deepEqual(cleared.map(cookie => cookie.name), ['jinfo_access', 'jinfo_refresh']);
+    for (const cookie of cleared) {
+      assert.equal(cookie.options.httpOnly, true);
+      assert.equal(cookie.options.secure, true);
+      assert.equal(cookie.options.sameSite, 'none');
+      assert.equal(cookie.options.maxAge, undefined);
+      assert.equal(Object.hasOwn(cookie.options, 'domain'), false);
+    }
+    assert.equal(cleared[0].options.path, '/');
+    assert.equal(cleared[1].options.path, '/api/auth');
+  } finally {
+    env.cookieSecure = oldSecure;
+    env.cookieSameSite = oldSameSite;
   }
 });

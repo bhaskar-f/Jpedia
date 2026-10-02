@@ -1,5 +1,5 @@
 {
-  "site": { "name": "j-info", "tagline": "Don't get Lost on your Job Preparation" },
+  "site": { "name": "SetBGet", "tagline": "set become and get" },
   "jobs": [
     { "id": "wbp-constable", "title": "WBP Constable", "organization": "West Bengal Police Selection Board", "category": "police", "tags": ["police", "west bengal", "constable", "10th"], "icon": "shield", "deadline": "12th Oct 2026", "qualification": "10th Pass", "age": "18–30", "location": "West Bengal", "status": "Application Open", "source": "West Bengal Police", "officialUrl": "https://wbpolice.gov.in/" },
     { "id": "delhi-police-si", "title": "Delhi Police SI", "organization": "SSC", "category": "ssc", "tags": ["ssc", "police", "delhi", "sub inspector", "graduate"], "icon": "badge", "deadline": "12th Oct 2026", "qualification": "Graduate", "age": "20–30", "location": "Delhi", "status": "Application Open", "source": "SSC", "officialUrl": "https://ssc.gov.in/" },

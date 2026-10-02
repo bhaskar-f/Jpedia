@@ -2,5 +2,8 @@
 node_modules/
 logs/
 backend/uploads/
+/public/
+/frontend/public/
+/backend/.env
 .DS_Store
 npm-debug.log*

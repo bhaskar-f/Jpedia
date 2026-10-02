@@ -2,11 +2,7 @@
   if (!window.location.pathname.startsWith("/jobs/")) return;
   const root = document.querySelector("#jobDetailRoot");
   if (!root) return;
-  const API_BASE =
-    window.JINFO_API_BASE ||
-    (window.location.port && window.location.port !== "3000"
-      ? `http://${window.location.hostname}:3000/api`
-      : `${window.location.origin}/api`);
+  const API_BASE = window.JPEDIA_CONFIG?.API_BASE_URL || window.JINFO_API_BASE || `${window.location.origin}/api`;
   const STATUSES = [
     "NOT_APPLIED",
     "APPLIED",
@@ -290,13 +286,10 @@
       const postDetails = window.JInfoJobContent?.renderPosts(job);
       if (postDetails) parent.append(postDetails);
     }
-    if (window.JInfoJobContent)
-      parent.append(
-        window.JInfoJobContent.renderSections(
-          job.contentSections,
-          job.contentBlocks,
-        ),
-      );
+    if (window.JInfoJobContent) {
+      if (Array.isArray(job.contentDocument) && job.contentDocument.length) parent.append(window.JInfoJobContent.renderDocument(job.contentDocument));
+      else parent.append(window.JInfoJobContent.renderSections(job.contentSections, job.contentBlocks));
+    }
   }
   function field(parent, label, value) {
     if (!exists(value)) return;
@@ -688,7 +681,7 @@
         el(
           "p",
           "job-detail-external-note",
-          "You are leaving J-Info for the official recruitment website.",
+          "You are leaving SetBGet for the official recruitment website.",
         ),
       );
     } else if (!closed && websiteUrl) {
@@ -705,7 +698,7 @@
         el(
           "p",
           "job-detail-external-note",
-          "You are leaving J-Info for the official website.",
+          "You are leaving SetBGet for the official website.",
         ),
       );
     } else if (!closed)
@@ -723,8 +716,8 @@
         window.location.origin,
       ).href;
       const data = {
-        title: job.title || "Jpedia job listing",
-        text: `View ${job.title || "this job"}${job.organization ? ` at ${job.organization}` : ""} on Jpedia.`,
+        title: job.title || "SetBGet job listing",
+        text: `View ${job.title || "this job"}${job.organization ? ` at ${job.organization}` : ""} on SetBGet.`,
         url: shareUrl,
       };
       try {
@@ -932,7 +925,7 @@
             const icon = el(
               "div",
               "job-icon",
-              (item.board?.name || "J-Info").slice(0, 2).toUpperCase(),
+              (item.board?.name || "SetBGet").slice(0, 2).toUpperCase(),
             );
             const info = el("div", "job-info");
             info.append(

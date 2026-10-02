@@ -35,7 +35,7 @@ async function main() {
   let user = await User.findOne({ email }).select('+passwordHash');
 
   if (user) {
-    user.name = DEV_USER_NAME || user.name || 'J-Info Test User';
+    user.name = DEV_USER_NAME || user.name || 'SetBGet Test User';
     user.phoneNumber = DEV_USER_PHONE || user.phoneNumber;
 
     // Development account is intentionally verified.
@@ -55,7 +55,7 @@ async function main() {
     const passwordHash = await bcrypt.hash(DEV_USER_PASSWORD, 12);
 
     user = await User.create({
-      name: DEV_USER_NAME || 'J-Info Test User',
+      name: DEV_USER_NAME || 'SetBGet Test User',
       email,
       phoneNumber: DEV_USER_PHONE || undefined,
       passwordHash,

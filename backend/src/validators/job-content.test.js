@@ -1,10 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { job } = require('./schemas');
+const { job, jobDraft } = require('./schemas');
 const { rankRelated } = require('../services/job.service');
 const pid = '64b000000000000000000001';
 const base = (extra = {}) => ({ title: 'Recruitment notice', organization: 'Public Board', ...extra });
 const block = (type, data) => ({ type, data });
+
+test('draft jobs accept an empty document without title or organization while complete-job schema stays strict', () => {
+  assert.equal(jobDraft.safeParse({ contentDocument: [] }).success, true);
+  assert.equal(jobDraft.safeParse({ contentDocument: [], title: '', organization: '' }).success, true);
+  assert.equal(job.safeParse({ contentDocument: [] }).success, false);
+});
 
 test('job content architecture accepts single and multi-post legacy recruitment data', () => {
   assert.equal(job.safeParse(base({ vacancyCount: 1, qualification: '12th Pass' })).success, true);
@@ -14,6 +20,16 @@ test('content sections accept mixed paragraph, table, callout, headings and list
   const mixed = [block('paragraph',{text:'Eligibility details.'}),block('table',{headers:['Category','Relaxation'],rows:[['SC/ST','5 years']]}),block('callout',{text:'Read the official notice.'})];
   assert.equal(job.safeParse(base({contentSections:[{title:'Age Relaxation',blocks:mixed}]})).success,true);
   assert.equal(job.safeParse(base({contentSections:[{title:'Selection',blocks:[block('heading',{text:'Stage 1'}),block('paragraph',{text:'Written test.'}),block('bulletList',{items:['Reasoning']}),block('table',{headers:['Stage','Marks'],rows:[['Written','100']]}),block('paragraph',{text:'Shortlisting applies.'})]}]})).success,true);
+});
+test('free-form document content accepts semantic blocks and safe formatting',()=>{
+  const contentDocument=[{type:'h1',attrs:{id:'heading-sbi-so-2026'},content:[{type:'strong',text:'SBI SO Recruitment 2026'}]},{type:'p',content:[{type:'span',text:'Apply at '},{type:'a',attrs:{href:'https://example.gov/apply'},content:[{type:'span',text:'official website'}]}]},{type:'ul',content:[{type:'li',content:[{type:'span',text:'Manager'}]}]},{type:'table',content:[{type:'tbody',content:[{type:'tr',content:[{type:'th',content:[{type:'span',text:'Post'}]},{type:'th',content:[{type:'span',text:'Vacancies'}]}]},{type:'tr',content:[{type:'td',content:[{type:'span',text:'Manager'}]},{type:'td',content:[{type:'span',text:'20'}]}]}]}]}];
+  assert.equal(job.safeParse(base({contentDocument})).success,true);
+});
+test('free-form documents reject unsafe URLs, executable tags, and unbounded text',()=>{
+  assert.equal(job.safeParse(base({contentDocument:[{type:'a',attrs:{href:'javascript:alert(1)'}}]})).success,false);
+  assert.equal(job.safeParse(base({contentDocument:[{type:'script',text:'alert(1)'}]})).success,false);
+  assert.equal(job.safeParse(base({contentDocument:[{type:'p',text:'x'.repeat(20001)}]})).success,false);
+  assert.equal(job.safeParse(base({contentDocument:[{type:'table',content:[{type:'tbody',content:[{type:'tr',content:[{type:'td'}]},{type:'tr',content:[{type:'td'},{type:'td'}]}]}]}]})).success,false);
 });
 test('custom tables accept 2 by 3 and 5 by 8 structures without fixed schemas', () => {
   const small={headers:['Category','Fee'],rows:[['General','100'],['SC/ST','0'],['Women','0']]};

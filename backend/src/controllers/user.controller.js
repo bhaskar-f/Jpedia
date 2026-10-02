@@ -1,7 +1,7 @@
 const { User, NotificationPreference, SavedJob, Application, CommunityMember, Notification } = require('../models');
 const auth = require('../services/auth.service');
 const { success, AppError } = require('../utils/http');
-const { clearRefreshCookie } = require('../middleware/auth.middleware');
+const { clearAccessCookie, clearRefreshCookie } = require('../middleware/auth.middleware');
 const getMe = async (req, res) => success(res, { user: auth.safeUser(req.user) });
 const updateMe = async (req, res) => {
   const { preferences, ...fields } = req.body;
@@ -31,9 +31,9 @@ const updateMe = async (req, res) => {
   await req.user.save();
   success(res, { user: auth.safeUser(req.user) });
 };
-const deleteMe = async (req, res) => { await Promise.all([SavedJob.deleteMany({ user: req.user._id }), Application.deleteMany({ user: req.user._id }), CommunityMember.deleteMany({ user: req.user._id }), Notification.deleteMany({ user: req.user._id })]); req.user.isActive = false; req.user.authTokenVersion = (req.user.authTokenVersion || 0) + 1; req.user.email = req.user.email ? `deleted-${req.user.id}@invalid.local` : undefined; req.user.phoneNumber = undefined; req.user.refreshTokenHash = undefined; await req.user.save(); res.clearCookie('jinfo_access', { path: '/' }); clearRefreshCookie(res); success(res, { deleted: true }); };
+const deleteMe = async (req, res) => { await Promise.all([SavedJob.deleteMany({ user: req.user._id }), Application.deleteMany({ user: req.user._id }), CommunityMember.deleteMany({ user: req.user._id }), Notification.deleteMany({ user: req.user._id })]); req.user.isActive = false; req.user.authTokenVersion = (req.user.authTokenVersion || 0) + 1; req.user.email = req.user.email ? `deleted-${req.user.id}@invalid.local` : undefined; req.user.phoneNumber = undefined; req.user.refreshTokenHash = undefined; await req.user.save(); clearAccessCookie(res); clearRefreshCookie(res); success(res, { deleted: true }); };
 const preferences = async (req, res) => { const value = await NotificationPreference.findOneAndUpdate({ user: req.user._id }, { $set: req.body, $setOnInsert: { user: req.user._id } }, { upsert: true, new: true }); success(res, value); };
 const changeEmail=async(req,res)=>{try{return success(res,{verificationEmailSent:await auth.requestEmailChange(req.user,req.body.email)});}catch(error){if(error.code==='EMAIL_IN_USE')throw new AppError(400,'EMAIL_CHANGE_UNAVAILABLE','Unable to start this email change. Check the address and try again.');throw error;}};
-const changePassword=async(req,res)=>{await auth.changePassword(req.user._id,req.body.currentPassword,req.body.newPassword,req.body.confirmPassword);res.clearCookie('jinfo_access',{path:'/'});clearRefreshCookie(res);success(res,{passwordChanged:true,sessionsInvalidated:true});};
+const changePassword=async(req,res)=>{await auth.changePassword(req.user._id,req.body.currentPassword,req.body.newPassword,req.body.confirmPassword);clearAccessCookie(res);clearRefreshCookie(res);success(res,{passwordChanged:true,sessionsInvalidated:true});};
 const updatePreferences = async (req, res) => { const allowed = ['email','sms','website','jobMatches','deadlineReminders','announcements']; if (Object.keys(req.body).some(key => !allowed.includes(key) || typeof req.body[key] !== 'boolean')) throw new AppError(400, 'VALIDATION_ERROR', 'Preferences must contain supported boolean notification settings.'); success(res, await NotificationPreference.findOneAndUpdate({ user: req.user._id }, { $set: req.body, $setOnInsert: { user: req.user._id } }, { upsert: true, new: true })); };
 module.exports = { getMe, updateMe, deleteMe, preferences, updatePreferences, changeEmail, changePassword };

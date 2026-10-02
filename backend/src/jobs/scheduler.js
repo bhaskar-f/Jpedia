@@ -1,3 +1,22 @@
-const cron=require('node-cron');const {env}=require('../config/env');const sources=require('../services/source.service');const reminders=require('../services/reminder.service');const jobs=require('../services/job.service');
-function startSchedulers(){if(!cron.validate(env.recruitmentCron))throw new Error('RECRUITMENT_CRON is invalid.');cron.schedule(env.recruitmentCron,()=>sources.fetchAll().catch(error=>console.error({event:'recruitment_schedule_error',errorType:error.name||'Error',code:error.code})));cron.schedule('*/15 * * * *',()=>reminders.deliverApplicationReminders().catch(error=>console.error({event:'reminder_schedule_error',errorType:error.name||'Error',code:error.code})));cron.schedule('11 2 * * *',()=>reminders.deliverDeadlineNotifications().catch(error=>console.error({event:'deadline_notification_error',errorType:error.name||'Error',code:error.code})));cron.schedule('17 1 * * *',()=>jobs.fetchExpired().catch(error=>console.error({event:'job_expiry_error',errorType:error.name||'Error',code:error.code})));console.info(`Recruitment fetch scheduled: ${env.recruitmentCron} (24-hour default)`);}
-module.exports={startSchedulers};
+const cron = require('node-cron');
+const { env } = require('../config/env');
+const { runTask } = require('./automation');
+
+const SCHEDULES = [
+  ['recruitment', env.recruitmentCron],
+  ['application-reminders', '*/15 * * * *'],
+  ['deadline-notifications', '11 2 * * *'],
+  ['expire-jobs', '17 1 * * *'],
+];
+
+function startSchedulers() {
+  if (process.env.VERCEL === '1') return false;
+  for (const [task, schedule] of SCHEDULES) {
+    if (!cron.validate(schedule)) throw new Error(`Schedule for ${task} is invalid.`);
+    cron.schedule(schedule, () => runTask(task).catch(error => console.error({ event: 'scheduled_task_error', task, errorType: error.name || 'Error', code: error.code })));
+  }
+  console.info(`Background tasks scheduled locally (${env.recruitmentCron} recruitment schedule).`);
+  return true;
+}
+
+module.exports = { SCHEDULES, startSchedulers };

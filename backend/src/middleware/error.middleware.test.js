@@ -40,3 +40,20 @@ test('production 500 responses and logs omit raw error details', () => {
     console.error = oldConsoleError;
   }
 });
+
+test('production database validation and duplicate errors return safe messages', () => {
+  const original = env.nodeEnv;
+  env.nodeEnv = 'production';
+  try {
+    for (const error of [
+      Object.assign(new Error('Cast to ObjectId failed for value secret-id'), { name: 'CastError' }),
+      Object.assign(new Error('E11000 duplicate key mongodb://private'), { code: 11000 }),
+    ]) {
+      const response = { status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+      errorHandler(error, { path: '/api/test', id: 'test' }, response, () => {});
+      assert.doesNotMatch(response.body.error.message, /secret-id|mongodb/);
+    }
+  } finally {
+    env.nodeEnv = original;
+  }
+});

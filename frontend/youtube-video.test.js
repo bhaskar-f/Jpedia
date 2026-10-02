@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const parseYouTubeVideoId = require('../../../youtube-video');
+const parseYouTubeVideoId = require('./youtube-video');
 
 test('parses supported YouTube watch, short, and embed links', () => {
   const id = 'AbCdEf_1234';

@@ -43,14 +43,14 @@ User.schema.index({ email: 1 }, { unique: true, sparse: true }); User.schema.ind
 const Board = mongoose.model('Board', schema({ name: { type: String, required: true, trim: true, maxlength: 120 }, slug: { type: String, required: true, unique: true, lowercase: true, trim: true }, shortDescription: { type: String, maxlength: 300 }, description: { type: String, maxlength: 10000 }, about: { type: String, maxlength: 10000 }, organization: { type: String, maxlength: 160 }, category: { type: String, maxlength: 100, lowercase: true, trim: true }, officialWebsite: String, officialNotificationWebsite: String, location: { type: String, maxlength: 160 }, icon: { type: String, maxlength: 500 }, active: { type: Boolean, default: true } }));
 Board.schema.index({ active: 1, name: 1 });
 const Job = mongoose.model('Job', schema({
-  title: { type: String, required: true, trim: true }, slug: { type: String, required: true, unique: true, lowercase: true }, organization: { type: String, required: true }, board: ref('Board', false), boardName: String, category: String, tags: [String], description: String, vacancyCount: Number,
+  title: { type: String, trim: true }, slug: { type: String, required: true, unique: true, lowercase: true }, organization: { type: String, trim: true }, board: ref('Board', false), boardName: String, category: String, tags: [String], description: String, vacancyCount: Number,
   applicationStartDate: Date, applicationDeadline: Date, examDate: Date, qualification: String, ageMin: Number, ageMax: Number, ageRelaxation: String, location: String, salary: String,
   selectionProcess: [String], applicationFee: Schema.Types.Mixed, categoryEligibility: [String], genderEligibility: String, officialWebsite: String, officialNotificationUrl: String, officialApplyUrl: String,
   howToApplyYoutubeUrl: String, syllabusResources: [resourceRef], pyqResources: [resourceRef], studyResources: [resourceRef], mockTestResources: [resourceRef], otherResources: [resourceRef],
   importantDates: [dateEntry], vacancyBreakdown: [vacancyEntry], ageCutoffDate: Date, ageDescription: String,
   ageRelaxations: [ageRelaxation], applicationFees: [feeEntry], qualifications: [qualificationEntry],
   selectionStages: [selectionStage], salaryInfo, howToApplySteps: [String], importantLinks: [importantLink],
-  contentBlocks: [contentBlock], contentSections: [contentSection], conditionalFields: [conditionalField], documentsRequired: [{ name: String, description: String, required: Boolean }],
+  contentDocument: [Schema.Types.Mixed], contentBlocks: [contentBlock], contentSections: [contentSection], conditionalFields: [conditionalField], documentsRequired: [{ name: String, description: String, required: Boolean }],
   importantInstructions: [{ text: String, category: String }], posts: [recruitmentPost], postGroups: [postGroup],
   source: ref('RecruitmentSource', false), sourceUrl: String, sourceExternalId: String, status: { type: String, enum: JOB_STATUSES, default: 'DRAFT' }, verificationStatus: { type: String, enum: ['UNVERIFIED','PENDING','VERIFIED','REJECTED'], default: 'UNVERIFIED' },
   author: ref('User', false), reviewedBy: ref('User', false), reviewedAt: Date, publishedBy: ref('User', false), publishedAt: Date, rejectionReason: String, rawSourceReference: String
