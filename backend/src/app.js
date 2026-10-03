@@ -1,5 +1,4 @@
 const express = require("express");
-const path = require("path");
 const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -28,7 +27,16 @@ const healthController = require("./controllers/health.controller");
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-app.use(helmet({ contentSecurityPolicy: { directives: { imgSrc: ["'self'", 'data:', 'https:'], frameSrc: ["'self'", 'https://www.youtube.com'] } } }));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        imgSrc: ["'self'", "data:", "https:"],
+        frameSrc: ["'self'", "https://www.youtube.com"],
+      },
+    },
+  }),
+);
 const { createCorsOptions } = require("./config/cors");
 app.use(cors(createCorsOptions(env.clientOrigins)));
 app.use(express.json({ limit: "1mb" }));
@@ -41,7 +49,7 @@ app.use(
   rateLimit({
     windowMs: 60 * 1000,
     limit: 180,
-    store: new MongoRateLimitStore('api'),
+    store: new MongoRateLimitStore("api"),
     standardHeaders: "draft-7",
     legacyHeaders: false,
   }),
@@ -86,14 +94,7 @@ app.post(
 );
 // Keep the legacy/local combined experience available. Vercel's API project
 // sets VERCEL=1 and never serves frontend files.
-if (process.env.VERCEL !== "1") {
-  const frontendRoot = path.resolve(__dirname, "../../frontend");
-  app.use(express.static(frontendRoot, { index: false }));
-  app.get(["/", "/index.html", /^\/(?:admin|dashboard|jobs|boards|communities|services)(?:\/.*)?$/, "/profile", "/settings", "/notifications", "/faqs", "/privacy", "/terms", "/about", "/contact"], (req, res) => res.sendFile(path.join(frontendRoot, "index.html")));
-  app.get("/data.json", (req, res) => res.sendFile(path.join(__dirname, "data", "seed.json")));
-  for (const file of ["qualification-taxonomy.json", "job-taxonomy.json", "india-locations.json"])
-    app.get(`/data/${file}`, (req, res) => res.sendFile(path.join(__dirname, "data", file)));
-}
+
 app.use(notFound);
 app.use(errorHandler);
 module.exports = app;
