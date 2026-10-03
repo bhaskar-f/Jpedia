@@ -25,6 +25,7 @@ const { asyncHandler, success } = require("./utils/http");
 const { requireAuth } = require("./middleware/auth.middleware");
 const healthController = require("./controllers/health.controller");
 const app = express();
+console.log("🔥 JPEDIA CURRENT APP.JS — NO FRONTEND SERVING");
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(
