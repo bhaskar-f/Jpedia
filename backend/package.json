@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "start:worker": "RAILWAY_SERVICE_ROLE=worker node src/server.js",
     "test": "node --test api/*.test.js src/config/*.test.js src/jobs/*.test.js src/routes/*.test.js src/seeds/*.test.js src/validators/*.test.js src/services/*.test.js src/middleware/*.test.js src/controllers/*.test.js",
     "seed": "node src/seeds/seed.js",
     "create:dev-user": "node src/seeds/create-dev-user.js",

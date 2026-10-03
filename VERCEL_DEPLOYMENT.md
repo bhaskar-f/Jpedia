@@ -71,9 +71,9 @@ Google callback validation accepts a valid HTTPS callback on the backend host an
 
 ## Cron and recruitment
 
-Vercel Cron is configured on the backend project only. Recruitment runs daily at 03:00 UTC. The existing reminder, deadline-notification, and expiration tasks are retained as separate schedules. Cron routes require the configured bearer secret and coordinate work with a MongoDB lease lock to avoid duplicate concurrent execution. Recruitment continues through source fetch, normalization, duplicate checks, and pending review records; discoveries are not auto-published. `node-cron` starts only in the local/Render server process and is disabled when `VERCEL=1`.
+Vercel Cron is configured on the backend project only. All four jobs run once daily, which fits Vercel Hobby: recruitment at `0 3 * * *` (03:00 UTC), application reminders at `41 2 * * *` (02:41 UTC), deadline notifications at `11 2 * * *` (02:11 UTC), and job expiration at `17 1 * * *` (01:17 UTC). Vercel Hobby runs a daily cron within its scheduled hour, so the actual invocation time can vary by up to 59 minutes. Cron routes require the configured bearer secret and coordinate work with a MongoDB lease lock to avoid duplicate concurrent execution. Recruitment continues through source fetch, normalization, duplicate checks, and pending review records; discoveries are not auto-published. `node-cron` starts only in the local/Render server process and is disabled when `VERCEL=1`.
 
-Vercel Cron schedule availability/frequency depends on the Vercel plan; confirm that the selected plan supports the 15-minute reminder schedule before enabling it.
+Application reminders cannot run every 15 minutes on Vercel Hobby: schedules more frequent than once daily are rejected at deployment. The existing backend reminder task and service remain in place and are invoked once per day. Each run selects every unsent application reminder with `reminderDate <= now`, sends the existing website/email/SMS notifications, and records `reminderSentAt`; reminders remain automatic but can arrive nearly 25 hours after becoming due. Local `node-cron` continues to check reminders every 15 minutes. A true 15-minute server-side schedule requires a plan or separate scheduling service with that capability; no such service is added here.
 
 ## Local setup
 

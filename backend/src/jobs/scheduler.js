@@ -11,11 +11,12 @@ const SCHEDULES = [
 
 function startSchedulers() {
   if (process.env.VERCEL === '1') return false;
+  if (process.env.RAILWAY_SERVICE_ROLE && process.env.RAILWAY_SERVICE_ROLE !== 'worker') return false;
   for (const [task, schedule] of SCHEDULES) {
     if (!cron.validate(schedule)) throw new Error(`Schedule for ${task} is invalid.`);
-    cron.schedule(schedule, () => runTask(task).catch(error => console.error({ event: 'scheduled_task_error', task, errorType: error.name || 'Error', code: error.code })));
+    cron.schedule(schedule, () => runTask(task).catch(error => console.error({ event: 'scheduled_task_error', task, errorType: error.name || 'Error', code: error.code })), { noOverlap: true });
   }
-  console.info(`Background tasks scheduled locally (${env.recruitmentCron} recruitment schedule).`);
+  console.info(`Background tasks scheduled (${env.recruitmentCron} recruitment schedule).`);
   return true;
 }
 

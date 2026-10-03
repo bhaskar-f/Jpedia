@@ -17,6 +17,12 @@ test('split Vercel projects have independent static and Express roots with prote
     '/api/cron/recruitment', '/api/cron/application-reminders',
     '/api/cron/deadline-notifications', '/api/cron/expire-jobs',
   ]);
+  assert.deepEqual(backend.crons.map(job => job.schedule), [
+    '0 3 * * *', '41 2 * * *', '11 2 * * *', '17 1 * * *',
+  ]);
+  assert.ok(backend.crons.every(job => job.schedule.split(' ')[2] === '*'
+    && job.schedule.split(' ')[4] === '*'
+    && !job.schedule.includes('*/')));
 });
 
 test('Vercel handler initializes once and forwards requests to the shared Express app', async () => {

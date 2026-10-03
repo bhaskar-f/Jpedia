@@ -12,7 +12,7 @@
     },
     {
       "path": "/api/cron/application-reminders",
-      "schedule": "*/15 * * * *"
+      "schedule": "41 2 * * *"
     },
     {
       "path": "/api/cron/deadline-notifications",

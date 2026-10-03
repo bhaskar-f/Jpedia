@@ -47,6 +47,7 @@ app.use(
   }),
 );
 app.get("/api/health", healthController.health);
+app.get("/api/ready", healthController.ready);
 app.use("/api/cron", cronRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
