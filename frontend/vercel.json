@@ -4,6 +4,7 @@
   "rewrites": [
     { "source": "/jobs", "destination": "/index.html" },
     { "source": "/jobs/:id", "destination": "/index.html" },
+    { "source": "/jobs/:path*", "destination": "/index.html" },
     { "source": "/boards", "destination": "/index.html" },
     { "source": "/boards/:slug", "destination": "/index.html" },
     { "source": "/communities", "destination": "/index.html" },

@@ -876,7 +876,7 @@ function renderJobs() {
   matches.slice(0, 5).forEach((job) => {
     const card = node("article", "job-card");
     card.dataset.jobId = job.id;
-    card.dataset.jobUrl = `/jobs/${encodeURIComponent(job.id)}`;
+    card.dataset.jobUrl = `/jobs/${encodeURIComponent(job.slug || job.id)}`;
     card.tabIndex = 0;
     card.setAttribute("role", "link");
     card.setAttribute("aria-label", `View ${job.title}`);
@@ -977,6 +977,7 @@ function mapApiJob(job) {
   const board = job.board && typeof job.board === "object" ? job.board : null;
   return {
     id: String(job._id),
+    slug: job.slug || "",
     title: job.title,
     organization: job.organization,
     board: board?.slug || "",

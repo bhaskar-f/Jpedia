@@ -11,7 +11,7 @@ if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.
   throw new Error('PUBLIC_API_BASE_URL must be an HTTP(S) API base URL ending in /api.');
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(path.join(output, 'data'), { recursive: true });
-for (const name of ['index.html', 'style.css', 'script.js', 'admin.js', 'public-pages.js', 'job-details.js', 'board-details.js', 'job-content.js', 'youtube-video.js', 'data.json', 'logo.png', 'favicon.png'])
+for (const name of ['index.html', 'style.css', 'script.js', 'admin.js', 'public-pages.js', 'job-details.js', 'board-details.js', 'job-content.js', 'youtube-video.js', 'data.json', 'logo.png'])
   fs.copyFileSync(path.join(root, name), path.join(output, name));
 for (const name of ['favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png', 'favicon-48x48.png', 'favicon-192x192.png', 'favicon-512x512.png'])
   fs.copyFileSync(path.join(root, 'assets', 'favicons', name), path.join(output, name));
