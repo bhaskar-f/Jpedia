@@ -605,22 +605,22 @@
       return;
     }
     const canonical = `https://www.setbget.in/jobs/${encodeURIComponent(job.slug || job._id)}`;
-    const summary = String(job.description || `${job.title || "Job details"}${job.organization ? ` at ${job.organization}` : ""}. Recruitment details and application information on SetBGet.`).replace(/\s+/g, " ").slice(0, 300);
+    const metaDescription = String(job.description || `${job.title || "Job details"}${job.organization ? ` at ${job.organization}` : ""}. Recruitment details and application information on SetBGet.`).replace(/\s+/g, " ").slice(0, 300);
     document.title = `${job.title || "Job details"}${job.organization ? ` at ${job.organization}` : ""} | SetBGet`;
     const setMeta = (selector, attr, value, tag, key, keyValue) => {
       let node = document.head.querySelector(selector);
       if (!node) { node = document.createElement(tag); node.setAttribute(key, keyValue); document.head.append(node); }
       node.setAttribute(attr, value);
     };
-    setMeta('meta[name="description"]', "content", summary, "meta", "name", "description");
+    setMeta('meta[name="description"]', "content", metaDescription, "meta", "name", "description");
     setMeta('link[rel="canonical"]', "href", canonical, "link", "rel", "canonical");
     setMeta('meta[name="robots"]', "content", "index, follow", "meta", "name", "robots");
     setMeta('meta[property="og:type"]', "content", "article", "meta", "property", "og:type");
     setMeta('meta[property="og:title"]', "content", document.title, "meta", "property", "og:title");
-    setMeta('meta[property="og:description"]', "content", summary, "meta", "property", "og:description");
+    setMeta('meta[property="og:description"]', "content", metaDescription, "meta", "property", "og:description");
     setMeta('meta[property="og:url"]', "content", canonical, "meta", "property", "og:url");
     setMeta('meta[name="twitter:title"]', "content", document.title, "meta", "name", "twitter:title");
-    setMeta('meta[name="twitter:description"]', "content", summary, "meta", "name", "twitter:description");
+    setMeta('meta[name="twitter:description"]', "content", metaDescription, "meta", "name", "twitter:description");
     setMeta('meta[name="twitter:url"]', "content", canonical, "meta", "name", "twitter:url");
     main.replaceChildren(crumbs, content);
     const userPromise = currentUser();
