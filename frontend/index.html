@@ -10,7 +10,8 @@
     />
     <meta name="robots" content="index, follow" />
     <script>
-      if (location.search || /^\/(admin|dashboard|profile|settings|notifications|services\/tracker)(\/|$)/.test(location.pathname) || location.pathname.startsWith('/jobs/')) {
+      const isJobDetail = location.pathname.startsWith('/jobs/');
+      if ((!isJobDetail && location.search) || /^\/(admin|dashboard|profile|settings|notifications|services\/tracker)(\/|$)/.test(location.pathname)) {
         document.querySelector('meta[name="robots"]')?.setAttribute('content', 'noindex, follow');
       }
     </script>

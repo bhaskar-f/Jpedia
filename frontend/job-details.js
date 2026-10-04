@@ -611,7 +611,7 @@
     };
     setMeta('meta[name="description"]', "content", summary, "meta", "name", "description");
     setMeta('link[rel="canonical"]', "href", canonical, "link", "rel", "canonical");
-    setMeta('meta[name="robots"]', "content", job.status === "PUBLISHED" ? "index, follow" : "noindex, follow", "meta", "name", "robots");
+    setMeta('meta[name="robots"]', "content", "index, follow", "meta", "name", "robots");
     setMeta('meta[property="og:type"]', "content", "article", "meta", "property", "og:type");
     setMeta('meta[property="og:title"]', "content", document.title, "meta", "property", "og:title");
     setMeta('meta[property="og:description"]', "content", summary, "meta", "property", "og:description");
