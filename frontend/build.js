@@ -13,6 +13,8 @@ fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(path.join(output, 'data'), { recursive: true });
 for (const name of ['index.html', 'style.css', 'script.js', 'admin.js', 'public-pages.js', 'job-details.js', 'board-details.js', 'job-content.js', 'youtube-video.js', 'data.json', 'logo.png', 'favicon.png'])
   fs.copyFileSync(path.join(root, name), path.join(output, name));
+for (const name of ['favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png', 'favicon-48x48.png', 'favicon-192x192.png', 'favicon-512x512.png'])
+  fs.copyFileSync(path.join(root, 'assets', 'favicons', name), path.join(output, name));
 for (const name of ['qualification-taxonomy.json', 'india-locations.json', 'job-taxonomy.json'])
   fs.copyFileSync(path.join(root, 'data', name), path.join(output, 'data', name));
 fs.writeFileSync(path.join(output, 'api-config.js'), `window.JPEDIA_CONFIG = Object.freeze({ API_BASE_URL: ${JSON.stringify(apiBase.replace(/\/$/, ''))} });\n`);
