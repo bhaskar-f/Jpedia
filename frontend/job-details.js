@@ -601,7 +601,7 @@
       content.replaceChildren(el("h1", "job-detail-error", "Job not found."));
       return;
     }
-    const canonical = `https://setbget.in/jobs/${encodeURIComponent(job.slug || job._id)}`;
+    const canonical = `https://www.setbget.in/jobs/${encodeURIComponent(job.slug || job._id)}`;
     const summary = String(job.description || `${job.title || "Job details"}${job.organization ? ` at ${job.organization}` : ""}. Recruitment details and application information on SetBGet.`).replace(/\s+/g, " ").slice(0, 300);
     document.title = `${job.title || "Job details"}${job.organization ? ` at ${job.organization}` : ""} | SetBGet`;
     const setMeta = (selector, attr, value, tag, key, keyValue) => {
@@ -618,6 +618,7 @@
     setMeta('meta[property="og:url"]', "content", canonical, "meta", "property", "og:url");
     setMeta('meta[name="twitter:title"]', "content", document.title, "meta", "name", "twitter:title");
     setMeta('meta[name="twitter:description"]', "content", summary, "meta", "name", "twitter:description");
+    setMeta('meta[name="twitter:url"]', "content", canonical, "meta", "name", "twitter:url");
     main.replaceChildren(crumbs, content);
     const userPromise = currentUser();
     const currentCrumb = el(

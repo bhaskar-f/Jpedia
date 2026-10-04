@@ -62,7 +62,7 @@
       const { board, jobs = [], upcomingJobs = [], resources = [] } = result.data;
       if (!board) { root.replaceChildren(el('p', 'board-detail-state', 'Board not found.')); return; }
       document.title = `${board.name} Recruitment Board | SetBGet`;
-      const canonical = `https://setbget.in/boards/${encodeURIComponent(board.slug || slug)}`;
+      const canonical = `https://www.setbget.in/boards/${encodeURIComponent(board.slug || slug)}`;
       const description = String(board.shortDescription || board.description || `Browse published recruitment notices from ${board.name} on SetBGet.`).replace(/\s+/g, ' ').slice(0, 300);
       const setMeta = (selector, attr, value, tag, key, keyValue) => { let node = document.head.querySelector(selector); if (!node) { node = document.createElement(tag); node.setAttribute(key, keyValue); document.head.append(node); } node.setAttribute(attr, value); };
       setMeta('meta[name="description"]', 'content', description, 'meta', 'name', 'description');
@@ -71,6 +71,7 @@
       setMeta('meta[property="og:title"]', 'content', document.title, 'meta', 'property', 'og:title');
       setMeta('meta[property="og:description"]', 'content', description, 'meta', 'property', 'og:description');
       setMeta('meta[property="og:url"]', 'content', canonical, 'meta', 'property', 'og:url');
+      setMeta('meta[name="twitter:url"]', 'content', canonical, 'meta', 'name', 'twitter:url');
       const pageNode = el('main', 'board-detail-page');
       const top = el('header', 'board-detail-top');
       const home = el('a', 'board-detail-brand', 'j-i'); home.href = '/'; top.append(home);

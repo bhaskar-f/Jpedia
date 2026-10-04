@@ -16,7 +16,7 @@ for (const name of ['index.html', 'style.css', 'script.js', 'admin.js', 'public-
 for (const name of ['qualification-taxonomy.json', 'india-locations.json', 'job-taxonomy.json'])
   fs.copyFileSync(path.join(root, 'data', name), path.join(output, 'data', name));
 fs.writeFileSync(path.join(output, 'api-config.js'), `window.JPEDIA_CONFIG = Object.freeze({ API_BASE_URL: ${JSON.stringify(apiBase.replace(/\/$/, ''))} });\n`);
-const canonicalHost = 'https://setbget.in';
+const canonicalHost = 'https://www.setbget.in';
 const publicRoutes = ['/', '/jobs', '/communities', '/faqs', '/boards', '/services', '/services/preparation', '/services/eligibility', '/privacy', '/terms', '/about', '/contact'];
 const escapeXml = value => String(value).replace(/[<>&'\"]/g, char => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '\"': '&quot;' })[char]);
 async function writeSitemap() {
