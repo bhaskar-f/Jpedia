@@ -8,6 +8,25 @@
       name="description"
       content="SetBGet — set become and get. Explore recruitment information and job-preparation tools in one place."
     />
+    <meta name="robots" content="index, follow" />
+    <script>
+      if (location.search || /^\/(admin|dashboard|profile|settings|notifications|services\/tracker)(\/|$)/.test(location.pathname) || location.pathname.startsWith('/jobs/')) {
+        document.querySelector('meta[name="robots"]')?.setAttribute('content', 'noindex, follow');
+      }
+    </script>
+    <link rel="canonical" href="https://setbget.in/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SetBGet" />
+    <meta property="og:title" content="SetBGet - set become and get" />
+    <meta property="og:description" content="Explore recruitment information and job-preparation tools in one place." />
+    <meta property="og:url" content="https://setbget.in/" />
+    <meta property="og:image" content="https://setbget.in/logo.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="SetBGet - set become and get" />
+    <meta name="twitter:description" content="Explore recruitment information and job-preparation tools in one place." />
+    <meta name="twitter:image" content="https://setbget.in/logo.png" />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"SetBGet","url":"https://setbget.in/"}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"SetBGet","url":"https://setbget.in/","logo":"https://setbget.in/logo.png"}</script>
     <title>SetBGet - set become and get</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
