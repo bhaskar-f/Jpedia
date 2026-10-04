@@ -1,5 +1,6 @@
 (() => {
-  if (!window.location.pathname.startsWith("/jobs/")) return;
+  const jobDetailPath = window.location.pathname.replace(/\/+$/, "");
+  if (!jobDetailPath.startsWith("/jobs/")) return;
   const root = document.querySelector("#jobDetailRoot");
   if (!root) return;
   const API_BASE = window.JPEDIA_CONFIG?.API_BASE_URL || window.JINFO_API_BASE || `${window.location.origin}/api`;
@@ -573,14 +574,16 @@
     );
     const content = el("div", "job-details-content");
     main.append(content);
-    const rawId = window.location.pathname
-      .slice("/jobs/".length)
-      .replace(/\/$/, "");
+    const routeMatch = jobDetailPath.match(/^\/jobs\/([^/]+)$/);
+    if (!routeMatch) {
+      main.replaceChildren(crumbs, content);
+      content.replaceChildren(el("h1", "job-detail-error", "Job not found."));
+      return;
+    }
     let job;
     try {
-      job = await api(
-        `/jobs/public/${encodeURIComponent(decodeURIComponent(rawId))}`,
-      );
+      const jobIdentifier = decodeURIComponent(routeMatch[1]);
+      job = await api(`/jobs/public/${encodeURIComponent(jobIdentifier)}`);
     } catch (error) {
       main.replaceChildren(crumbs, content);
       content.replaceChildren(

@@ -1433,6 +1433,10 @@ if (backTopButton)
     window.scrollTo({ top: 0, behavior: "smooth" }),
   );
 
+// Claim public job-detail routes before the static homepage can remain visible.
+const isJobDetailRoute = window.location.pathname.startsWith("/jobs/");
+if (isJobDetailRoute) document.body.classList.add("job-details-shell");
+
 if (
   window.location.pathname === "/" ||
   window.location.pathname === "/index.html"
