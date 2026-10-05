@@ -109,6 +109,21 @@ test('supported locale codes map to their India regional formatting locales', as
   }
 });
 
+test('board and preparation result messages pluralize and localize counts by selected locale', async () => {
+  storedValues.clear();
+  const { api } = loadI18n();
+  await api.ready;
+  for (const [locale, intlLocale] of [['en', 'en-IN'], ['hi', 'hi-IN'], ['bn', 'bn-IN']]) {
+    api.setLocale(locale);
+    const expectedCount = new Intl.NumberFormat(intlLocale).format(21);
+    for (const namespace of ['boards', 'examPreparation']) {
+      const message = api.t(`${namespace}.pageResults`, { page: 2, count: 21 });
+      assert.ok(message.includes(expectedCount));
+      assert.ok(message.includes(new Intl.NumberFormat(intlLocale).format(2)));
+    }
+  }
+});
+
 test('English strings are used if a selected locale catalog cannot be loaded', async () => {
   storedValues.clear();
   const { api } = loadI18n({ failedLocales: ['hi'] });

@@ -17,7 +17,7 @@
   const isCommunityDetail = path.startsWith("/communities/");
   const userWorkspaceRoute = path === "/dashboard" || path.startsWith("/dashboard/") || path === "/profile" || path === "/settings";
   if (!root || (!routePaths.includes(path) && !path.startsWith("/dashboard/") && !isCommunityDetail)) return;
-  if (path === "/jobs")
+  if (["/jobs", "/boards", "/services/preparation"].includes(path))
     document.addEventListener("setbget:localechange", () => location.reload());
   root.hidden = false;
   document.body.classList.add("public-route");
@@ -160,7 +160,21 @@
   async function getUser() { try { return (await api("/users/me")).user; } catch (error) { if (error.status !== 401) throw error; try { await api("/auth/refresh", { method: "POST" }); return (await api("/users/me")).user; } catch { return null; } } }
   function setAccount(user) { const account = document.querySelector("#loginBtn"); if (!account) return; const key = !user ? "navigation.signIn" : user.role === "USER" ? "navigation.dashboard" : null; const label = key ? t(key) : `${user.name || "Account"} · ${user.role}`; const text = add(document.createDocumentFragment(), "span", "", label); if (key) text.dataset.i18n = key; if (document.body.classList.contains("public-mobile-shell")) { account.replaceChildren(icon("account", "home-account-icon"), text); if (key) account.dataset.i18nAriaLabel = key; else delete account.dataset.i18nAriaLabel; account.setAttribute("aria-label", label); } else account.replaceChildren(text); account.onclick = () => { if (!user) return loginFor(path); if (user.role === "USER") return window.location.assign("/dashboard"); window.location.assign(user.role === "AUTHOR" ? "/admin/jobs" : "/admin"); }; }
   function jobCard(parent, job) { const card = add(parent, "article", "public-card public-job-card"); link(card, `/jobs/${encodeURIComponent(job.slug || job._id)}`, job.title, "public-card-title"); add(card, "p", "", job.organization || ""); const facts = [job.board?.name || job.boardName, job.category, job.qualification, job.location, job.applicationDeadline ? t("jobs.deadline", { date: formatDate(job.applicationDeadline) }) : ""].filter(Boolean); if (facts.length) add(card, "p", "public-card-meta", facts.join(" · ")); }
-  function pager(parent, meta, onPage, localizedJobs = false) { parent.querySelectorAll(":scope > .public-pagination").forEach(item => item.remove()); if (!meta || meta.total <= meta.limit) return; const bar = add(parent, "nav", "public-pagination"); add(bar, "span", "", localizedJobs ? t("jobs.pageResults", { page: meta.page, count: meta.total }) : `Page ${meta.page} · ${meta.total} results`); const prev = button(bar, localizedJobs ? t("jobs.previous") : "Previous", () => onPage(meta.page - 1)); prev.disabled = meta.page <= 1; const next = button(bar, localizedJobs ? t("jobs.next") : "Next", () => onPage(meta.page + 1)); next.disabled = !meta.hasNextPage; }
+  function pager(parent, meta, onPage, localizedNamespace = null) {
+    parent.querySelectorAll(":scope > .public-pagination").forEach(item => item.remove());
+    if (!meta || meta.total <= meta.limit) return;
+    const bar = add(parent, "nav", "public-pagination");
+    const namespace = localizedNamespace === true ? "jobs" : localizedNamespace;
+    if (namespace && namespace !== "jobs") bar.setAttribute("aria-label", t(`${namespace}.paginationLabel`));
+    add(bar, "span", "", namespace
+      ? t(`${namespace}.pageResults`, { page: meta.page, count: meta.total })
+      : `Page ${meta.page} · ${meta.total} results`);
+    const previous = button(bar, namespace ? t(`${namespace}.previous`) : "Previous", () => onPage(meta.page - 1));
+    previous.disabled = meta.page <= 1;
+    const next = button(bar, namespace ? t(`${namespace}.next`) : "Next", () => onPage(meta.page + 1));
+    next.disabled = !meta.hasNextPage;
+    return bar;
+  }
   async function jobsPage(user) {
     await i18n?.ready;
     const current = new URLSearchParams(location.search), currentPage = Math.max(1, Number(current.get("page")) || 1);
@@ -282,8 +296,98 @@
       pager(area, result.pagination, p => location.assign(`/faqs?page=${p}`));
     } catch { list.replaceChildren(); notice(list, "FAQs could not be loaded right now. Please try again later.", "is-error"); }
   }
-  async function boardsPage() { const params = new URLSearchParams(location.search), wrap = page("Government Boards", "Browse active recruitment boards and their published openings."); const list = add(wrap, "div", "public-card-list"); notice(list, "Loading boards…"); try { const result = pageCollection(await apiPage(`/boards?page=${Math.max(1, Number(params.get("page")) || 1)}&limit=20&q=${encodeURIComponent(params.get("q") || "")}`), "/boards"); list.replaceChildren(); if (!result.items.length) notice(list, "No active boards found."); result.items.forEach(item => { const card = add(list, "article", "public-card"); link(card, `/boards/${encodeURIComponent(item.slug)}`, item.name, "public-card-title"); add(card, "p", "", item.shortDescription || item.organization || item.category || ""); link(card, `/jobs?board=${encodeURIComponent(item.slug)}`, "View published jobs", "public-text-link"); }); pager(wrap, result.pagination, p => location.assign(`/boards?page=${p}`)); } catch { list.replaceChildren(); notice(list, "Boards could not be loaded right now. Please try again later.", "is-error"); } }
-  async function preparationPage() { const params = new URLSearchParams(location.search), wrap = page("Exam Preparation", "Browse published study resources by exam, board, and resource type."); const form = add(wrap, "form", "public-filter-form"); const boards = await apiCollection("/boards?page=1&limit=100"); const label = add(form, "label", "public-field"); add(label, "span", "", "Board"); const board = add(label, "select"); board.name = "board"; board.append(new Option("All boards", "")); boards.forEach(b => board.append(new Option(b.name, b._id))); board.value = params.get("board") || ""; const typeLabel = add(form, "label", "public-field"); add(typeLabel, "span", "", "Resource type"); const type = add(typeLabel, "select"); type.name = "type"; type.append(new Option("All resources", "")); [["Syllabus","SYLLABUS"],["Previous papers","PYQ"],["Mock tests","MOCK_TEST"],["Study materials","STUDY_MATERIAL"]].forEach(([n,v]) => type.append(new Option(n,v))); type.value = params.get("type") || ""; const exam = add(form, "label", "public-field"); add(exam, "span", "", "Exam"); const examInput = add(exam, "input"); examInput.name = "exam"; examInput.value = params.get("exam") || ""; const go = add(form, "button", "small-btn", "Filter resources"); go.type = "submit"; const list = add(wrap, "div", "public-card-list"); notice(list, "Loading published resources…"); form.addEventListener("submit", event => { event.preventDefault(); const query = queryString(Object.fromEntries(new FormData(form))); location.assign(`/services/preparation${query ? `?${query}` : ""}`); }); try { const result = pageCollection(await apiPage(`/resources?${queryString({ ...Object.fromEntries(params), page: params.get("page") || 1, limit: 20 })}`), "/resources"); list.replaceChildren(); if (!result.items.length) notice(list, "No published resources match these filters."); result.items.forEach(item => { const card = add(list, "article", "public-card"); add(card, "h2", "public-card-title", item.title); add(card, "p", "public-card-meta", [item.type, item.exam, item.board?.name].filter(Boolean).join(" · ")); if (item.description) add(card, "p", "", item.description); const url = item.url || item.externalUrl || item.cloudinaryUrl; if (url && /^https?:\/\//i.test(url)) { const a = link(card, url, item.accessMode === "DOWNLOAD" ? "Download resource" : "Open resource", "public-text-link"); a.target = "_blank"; a.rel = "noopener noreferrer"; } }); pager(wrap, result.pagination, p => { const query = new URLSearchParams(location.search); query.set("page", p); location.assign(`/services/preparation?${query}`); }); } catch { list.replaceChildren(); notice(list, "Resources could not be loaded right now. Please try again later.", "is-error"); } }
+  async function boardsPage() {
+    await i18n?.ready;
+    const params = new URLSearchParams(location.search);
+    const wrap = page(t("boards.title"), t("boards.description"));
+    const list = add(wrap, "div", "public-card-list");
+    notice(list, t("boards.loading"));
+    try {
+      const result = pageCollection(await apiPage(`/boards?page=${Math.max(1, Number(params.get("page")) || 1)}&limit=20&q=${encodeURIComponent(params.get("q") || "")}`), "/boards");
+      list.replaceChildren();
+      if (!result.items.length) notice(list, t("boards.noBoards"));
+      result.items.forEach(item => {
+        const card = add(list, "article", "public-card");
+        const boardLink = link(card, `/boards/${encodeURIComponent(item.slug)}`, item.name, "public-card-title");
+        boardLink.setAttribute("aria-label", `${t("boards.viewBoard")}: ${item.name}`);
+        add(card, "p", "", item.shortDescription || item.organization || item.category || "");
+        link(card, `/jobs?board=${encodeURIComponent(item.slug)}`, t("boards.viewJobs"), "public-text-link");
+      });
+      pager(wrap, result.pagination, p => location.assign(`/boards?page=${p}`), "boards");
+    } catch (error) {
+      list.replaceChildren();
+      notice(list, apiError(error, "boards.loadError"), "is-error");
+    }
+  }
+  async function preparationPage() {
+    await i18n?.ready;
+    const params = new URLSearchParams(location.search);
+    const wrap = page(t("examPreparation.title"), t("examPreparation.description"));
+    const form = add(wrap, "form", "public-filter-form");
+    const label = add(form, "label", "public-field");
+    add(label, "span", "", t("examPreparation.board"));
+    const board = add(label, "select"); board.name = "board";
+    const typeLabel = add(form, "label", "public-field");
+    add(typeLabel, "span", "", t("examPreparation.resourceType"));
+    const type = add(typeLabel, "select"); type.name = "type";
+    const exam = add(form, "label", "public-field");
+    add(exam, "span", "", t("examPreparation.exam"));
+    const examInput = add(exam, "input"); examInput.name = "exam";
+    examInput.placeholder = t("examPreparation.examPlaceholder");
+    examInput.value = params.get("exam") || "";
+    const go = add(form, "button", "small-btn", t("examPreparation.filterResources")); go.type = "submit";
+    const list = add(wrap, "div", "public-card-list");
+    notice(list, t("examPreparation.loading"));
+    const typeOptions = [
+      ["examPreparation.types.syllabus", "SYLLABUS"],
+      ["examPreparation.types.previousPapers", "PYQ"],
+      ["examPreparation.types.mockTests", "MOCK_TEST"],
+      ["examPreparation.types.studyMaterials", "STUDY_MATERIAL"],
+    ];
+    const resourceTypeLabel = value => {
+      const entry = typeOptions.find(([, code]) => code === value);
+      return entry ? t(entry[0]) : value;
+    };
+    const query = queryString({ ...Object.fromEntries(params), page: params.get("page") || 1, limit: 20 });
+    try {
+      const boards = await apiCollection("/boards?page=1&limit=100");
+      board.append(new Option(t("examPreparation.allBoards"), ""));
+      boards.forEach(item => board.append(new Option(item.name, item._id)));
+      board.value = params.get("board") || "";
+      type.append(new Option(t("examPreparation.allResources"), ""));
+      typeOptions.forEach(([labelKey, value]) => type.append(new Option(t(labelKey), value)));
+      type.value = params.get("type") || "";
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        const nextQuery = queryString(Object.fromEntries(new FormData(form)));
+        location.assign(`/services/preparation${nextQuery ? `?${nextQuery}` : ""}`);
+      });
+      const result = pageCollection(await apiPage(`/resources?${query}`), "/resources");
+      list.replaceChildren();
+      if (!result.items.length) notice(list, t("examPreparation.noResults"));
+      result.items.forEach(item => {
+        const card = add(list, "article", "public-card");
+        card.setAttribute("aria-label", `${t("accessibility.resourceCard")}: ${item.title}`);
+        add(card, "h2", "public-card-title", item.title);
+        add(card, "p", "public-card-meta", [resourceTypeLabel(item.type), item.exam, item.board?.name].filter(Boolean).join(" · "));
+        if (item.description) add(card, "p", "", item.description);
+        const url = item.url || item.externalUrl || item.cloudinaryUrl;
+        if (url && /^https?:\/\//i.test(url)) {
+          const label = item.accessMode === "DOWNLOAD" ? "examPreparation.downloadResource" : "examPreparation.openResource";
+          const a = link(card, url, t(label), "public-text-link");
+          a.setAttribute("aria-label", `${t(label)}: ${item.title}`);
+          a.target = "_blank"; a.rel = "noopener noreferrer";
+        }
+      });
+      pager(wrap, result.pagination, p => {
+        const next = new URLSearchParams(location.search); next.set("page", p);
+        location.assign(`/services/preparation?${next}`);
+      }, "examPreparation");
+    } catch (error) {
+      list.replaceChildren();
+      notice(list, apiError(error, "examPreparation.loadError"), "is-error");
+    }
+  }
   async function preferencesForm(parent, user) { const area = section(parent, "Job preferences", "/jobs", "Browse jobs"); area.id = "preferences"; const form = add(area, "form", "public-filter-form"); const education = add(form, "label", "public-field"); add(education, "span", "", "Education / qualification"); const educationInput = add(education, "input"); educationInput.name = "education"; educationInput.value = user.education || ""; const locationField = add(form, "label", "public-field"); add(locationField, "span", "", "Location"); const locationInput = add(locationField, "input"); locationInput.name = "location"; locationInput.value = user.location || ""; const exams = add(form, "label", "public-field"); add(exams, "span", "", "Preferred exams or boards (comma separated)"); const examsInput = add(exams, "input"); examsInput.name = "preferredExams"; examsInput.value = (user.preferredExams || []).join(", "); const candidates = await apiCollection("/jobs?page=1&limit=100"); const categories = [...new Set(candidates.map(x => x.category).filter(Boolean))].sort(); const box = add(form, "fieldset", "public-preference-categories"); add(box, "legend", "", "Preferred job categories (choose any that apply)"); if (!categories.length) add(box, "p", "public-card-meta", "No published job categories are available to choose yet."); categories.forEach(category => { const label = add(box, "label", "public-checkbox"); const input = add(label, "input"); input.type = "checkbox"; input.name = "preferredJobCategories"; input.value = category; input.checked = (user.preferredJobCategories || []).includes(category); add(label, "span", "", category); }); const save = add(form, "button", "small-btn", "Save preferences"); save.type = "submit"; const message = add(area, "p", "public-notice"); form.addEventListener("submit", async event => { event.preventDefault(); const values = new FormData(form); const categoriesSelected = values.getAll("preferredJobCategories"); const preferredExams = String(values.get("preferredExams") || "").split(",").map(v => v.trim()).filter(Boolean); try { const result = await api("/users/me", { method: "PATCH", body: JSON.stringify({ education: String(values.get("education") || "").trim(), location: String(values.get("location") || "").trim(), preferredExams, preferredJobCategories: categoriesSelected }) }); Object.assign(user, result.user); message.textContent = "Preferences saved."; } catch (error) { message.textContent = error.message || "Could not save preferences."; message.classList.add("is-error"); } }); }
   async function trackerPage(user) { const wrap = page("Application Tracker", "Track the application status and reminders you have saved to your account."); const list = section(wrap, "Your applications", "/jobs", "Find jobs"); if (!user) { notice(list, "Sign in to use your application tracker."); link(list, `/?auth=login&returnTo=${encodeURIComponent("/services/tracker")}`, "Sign in", "small-btn"); return; } try { const apps = await api("/applications?page=1&limit=100"); if (!apps.length) notice(list, "No applications tracked yet. Find a published job and add it to your tracker."); apps.forEach(app => { const card = add(list, "article", "public-card"); if (app.job) link(card, `/jobs/${encodeURIComponent(app.job.slug || app.job._id)}`, app.job.title, "public-card-title"); const form = add(card, "form", "public-filter-form"); const stateLabel = add(form, "label", "public-field"); add(stateLabel, "span", "", "Status"); const select = add(stateLabel, "select"); statuses.forEach(status => select.append(new Option(status.replaceAll("_", " "), status))); select.value = app.status; const notesLabel = add(form, "label", "public-field"); add(notesLabel, "span", "", "Notes"); const notes = add(notesLabel, "input"); notes.value = app.notes || ""; const save = add(form, "button", "small-btn", "Save update"); save.type = "submit"; const remove = add(form, "button", "public-danger-button", "Remove"); remove.type = "button"; remove.addEventListener("click", async () => { if (!confirm("Remove this application from your tracker?")) return; try { await api(`/applications/${app._id}`, { method: "DELETE" }); card.remove(); } catch (error) { notice(card, error.message, "is-error"); } }); form.addEventListener("submit", async event => { event.preventDefault(); try { await api(`/applications/${app._id}`, { method: "PATCH", body: JSON.stringify({ status: select.value, notes: notes.value }) }); notice(card, "Application updated."); } catch (error) { notice(card, error.message, "is-error"); } }); }); } catch (error) { notice(list, error.message || "Could not load applications.", "is-error"); } }
   async function eligibilityPage() { const wrap = page("Eligibility Checker", "Compare your details with structured recruitment criteria. This is a screening aid, not an official eligibility decision."); const jobs = await apiCollection("/jobs?page=1&limit=100"); const form = add(wrap, "form", "public-filter-form"); form.classList.add("eligibility-form"); const jobLabel = add(form, "label", "public-field"); add(jobLabel, "span", "", "Published recruitment"); const jobSelect = add(jobLabel, "select"); jobs.forEach(job => jobSelect.append(new Option(job.title, job._id))); const postLabel = add(form, "label", "public-field"); add(postLabel, "span", "", "Post"); const postSelect = add(postLabel, "select"); const updatePosts = () => { const job = jobs.find(x => String(x._id) === jobSelect.value); postSelect.replaceChildren(new Option("Recruitment-level criteria", "")); (job?.posts || []).forEach(post => postSelect.append(new Option(post.name || "Post", String(post._id)))); }; jobSelect.addEventListener("change", updatePosts); updatePosts(); const ageLabel = add(form, "label", "public-field"); add(ageLabel, "span", "", "Your age"); const age = add(ageLabel, "input"); age.type = "number"; age.min = "1"; const qualificationLabel = add(form, "label", "public-field"); add(qualificationLabel, "span", "", "Your qualification (optional)"); const qualification = add(qualificationLabel, "input"); const check = add(form, "button", "small-btn eligibility-submit", "Review criteria"); check.type = "submit"; const result = add(wrap, "section", "public-section"); form.addEventListener("submit", event => { event.preventDefault(); const job = jobs.find(x => String(x._id) === jobSelect.value); const post = job?.posts?.find(x => String(x._id) === postSelect.value); if (!job) return; result.replaceChildren(); add(result, "h2", "", "Available criteria"); const min = post?.ageMin ?? job.ageMin, max = post?.ageMax ?? job.ageMax; let assessed = false; if (age.value && (min != null || max != null)) { assessed = true; const matches = Number(age.value) >= (min ?? 0) && Number(age.value) <= (max ?? 120); add(result, "p", "", `Age range ${min ?? "not specified"}–${max ?? "not specified"}: ${matches ? "within the recorded range" : "outside the recorded range"}.`); } const qualRows = post?.qualifications || job?.qualifications || []; if (qualRows.length) { assessed = true; add(result, "p", "", `Qualification criteria: ${qualRows.map(x => [x.name, x.field, x.condition, x.additionalRequirement, x.minimumMarks && `Minimum marks ${x.minimumMarks}`].filter(Boolean).join(" · ")).join("; ")}`); if (qualification.value) add(result, "p", "", "Compare your qualification with each post requirement; the site cannot confirm equivalency."); } else if (job.qualification) { add(result, "p", "", `Recruitment qualification text: ${job.qualification}.`); } if (post?.experienceRequirements?.length) add(result, "p", "", `Experience: ${post.experienceRequirements.map(x => [x.minimumExperience, x.domain, x.description].filter(Boolean).join(" · ")).join("; ")}`); if (post?.mandatoryCertifications?.length) add(result, "p", "", `Mandatory certifications: ${post.mandatoryCertifications.join(", ")}`); add(result, "p", "public-notice", assessed ? "Only the displayed structured criteria were reviewed; other recruitment conditions may apply. Verify the official notice." : "Structured age or qualification criteria are not available for this selection. Check the official notice; eligibility cannot be assessed here."); }); }

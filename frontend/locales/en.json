@@ -23,7 +23,10 @@
     "hidePassword": "Hide password",
     "closeNavigation": "Close navigation",
     "openDashboardNavigation": "Open dashboard navigation",
-    "setbgetHome": "SetBGet Home"
+    "setbgetHome": "SetBGet Home",
+    "boardDetailsRegion": "Board details",
+    "boardJobsPagination": "Board jobs pagination",
+    "resourceCard": "Preparation resource"
   },
   "loading": {
     "publicPage": "Loading SetBGet…"
@@ -260,6 +263,76 @@
     "watchOnYoutube": "Watch on YouTube",
     "openLink": "Open link",
     "recruitmentInformationAlt": "Recruitment information"
+  },
+  "boards": {
+    "title": "Government Boards",
+    "description": "Browse active recruitment boards and their published openings.",
+    "navLabel": "Boards",
+    "browseBoards": "Browse Government Boards →",
+    "viewAllAria": "View all government boards",
+    "viewBoard": "View board",
+    "allBoardsFilter": "All",
+    "viewJobs": "View published jobs",
+    "loading": "Loading boards…",
+    "loadingDetail": "Loading board…",
+    "deadlinePrefix": "Deadline:",
+    "noBoards": "No active boards found.",
+    "loadError": "Boards could not be loaded right now. Please try again later.",
+    "titleSuffix": "Recruitment Board",
+    "visitOfficialWebsite": "Visit Official Website",
+    "officialNotifications": "Official Notifications",
+    "aboutBoard": "About this Board",
+    "upcomingJobs": "Upcoming Jobs",
+    "latestJobs": "Latest Jobs",
+    "jobDetails": "Job details",
+    "deadline": "Deadline: {date}",
+    "noPublishedJobs": "No published jobs for this board yet.",
+    "preparation": "Preparation",
+    "preparationEmpty": "Preparation resources will appear here when available.",
+    "notFound": "Board not found.",
+    "detailLoadError": "Unable to load this board right now.",
+    "fallbackDescriptionPrefix": "Browse published recruitment notices from",
+    "fallbackDescriptionSuffix": "on SetBGet.",
+    "paginationLabel": "Government boards pagination",
+    "noHomeBoards": "No active boards available.",
+    "categories": { "police": "Police", "railway": "Railway" },
+    "previous": "Previous",
+    "next": "Next",
+    "pageResults": {
+      "one": "Page {page} · {count} result",
+      "other": "Page {page} · {count} results"
+    }
+  },
+  "examPreparation": {
+    "title": "Exam Preparation",
+    "exploreAria": "Explore preparation resources",
+    "description": "Browse published study resources by exam, board, and resource type.",
+    "studyMaterials": "Study Materials",
+    "board": "Board",
+    "allBoards": "All boards",
+    "resourceType": "Resource type",
+    "allResources": "All resources",
+    "exam": "Exam",
+    "examPlaceholder": "Search by exam",
+    "filterResources": "Filter resources",
+    "loading": "Loading published resources…",
+    "paginationLabel": "Preparation resource pagination",
+    "noResults": "No published resources match these filters.",
+    "loadError": "Resources could not be loaded right now. Please try again later.",
+    "openResource": "Open resource",
+    "downloadResource": "Download resource",
+    "previous": "Previous",
+    "next": "Next",
+    "pageResults": {
+      "one": "Page {page} · {count} resource",
+      "other": "Page {page} · {count} resources"
+    },
+    "types": {
+      "syllabus": "Syllabus",
+      "previousPapers": "Previous papers",
+      "mockTests": "Mock tests",
+      "studyMaterials": "Study materials"
+    }
   },
   "pluralization": {
     "forms": ["one", "other"]

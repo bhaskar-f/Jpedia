@@ -100,8 +100,8 @@
           </summary>
           <div class="services-menu-panel" role="menu">
             <a role="menuitem" href="/dashboard">My Job Preparation</a>
-            <a role="menuitem" href="/services/preparation">Exam Preparation</a>
-            <a role="menuitem" href="/services/preparation">Study Materials</a>
+            <a role="menuitem" href="/services/preparation" data-i18n="examPreparation.title">Exam Preparation</a>
+            <a role="menuitem" href="/services/preparation" data-i18n="examPreparation.studyMaterials">Study Materials</a>
             <a role="menuitem" href="/services/eligibility"
               >Eligibility Checker</a
             >
@@ -168,7 +168,7 @@
           </button>
         </form>
         <div class="filter-row">
-          <button class="filter-btn" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="all" data-i18n="boards.allBoardsFilter">All</button>
           <span id="boardFilterButtons"></span>
         </div>
       </section>
@@ -241,9 +241,9 @@
           <a
             class="arrow-square"
             href="/services/preparation"
-            aria-label="Explore preparation resources"
+            aria-label="Explore preparation resources" data-i18n-aria-label="examPreparation.exploreAria"
           >
-            <h2>Exam Preparation</h2>
+            <h2 data-i18n="examPreparation.title">Exam Preparation</h2>
             <span>›</span></a
           >
         </div>
@@ -252,8 +252,8 @@
 
       <section id="boardsSection" class="section boards-section">
         <div class="section-heading">
-          <a class="arrow-square" href="/boards" aria-label="View all boards"
-            ><h2>Government Boards</h2>
+          <a class="arrow-square" href="/boards" aria-label="View all boards" data-i18n-aria-label="boards.viewAllAria"
+            ><h2 data-i18n="boards.title">Government Boards</h2>
             <span>›</span></a
           >
         </div>
@@ -364,14 +364,14 @@
         </div>
       </div>
       <div class="footer-links">
-        <a href="/services/preparation">Exam Preparation</a
+          <a href="/services/preparation" data-i18n="examPreparation.title">Exam Preparation</a
         ><a href="/services/eligibility">Eligibility Checker</a
         ><a href="/services/tracker">Application Tracker</a
-        ><a href="/boards">Boards</a>
+          ><a href="/boards" data-i18n="boards.navLabel">Boards</a>
       </div>
       <div class="footer-placeholder">
         <a class="footer-resource-link" href="/boards"
-          >Browse Government Boards →</a
+          data-i18n="boards.browseBoards" >Browse Government Boards</a
         >
       </div>
     </footer>

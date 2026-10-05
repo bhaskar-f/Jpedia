@@ -958,17 +958,18 @@ function renderBoards() {
     const image = node("span");
     image.append(icon(board.icon));
     button.append(image, node("b", "", board.name));
+    button.setAttribute("aria-label", `${t("boards.viewBoard")}: ${board.name}`);
     container.append(button);
   });
   if (!state.data.boards.length)
-    container.append(node("p", "empty-tracker", "No active boards available."));
+    container.append(node("p", "empty-tracker", t("boards.noHomeBoards")));
 }
 function boardFilterLabel(board) {
   const identity =
     `${board.slug} ${board.category || ""} ${board.name}`.toLowerCase();
-  if (identity.includes("police")) return "Police";
+  if (identity.includes("police")) return t("boards.categories.police");
   if (identity.includes("rrb") || identity.includes("railway"))
-    return "Railway";
+    return t("boards.categories.railway");
   return board.name;
 }
 function renderBoardFilters() {
@@ -1439,6 +1440,17 @@ if (backTopButton)
   backTopButton.addEventListener("click", () =>
     window.scrollTo({ top: 0, behavior: "smooth" }),
   );
+
+if (["/", "/index.html"].includes(window.location.pathname)) {
+  const updateLocalizedBoardAndPreparationUi = () => {
+    if (!state.data) return;
+    renderPreparation();
+    renderBoards();
+    renderBoardFilters();
+  };
+  document.addEventListener("setbget:localechange", updateLocalizedBoardAndPreparationUi);
+  document.addEventListener("setbget:catalogsready", updateLocalizedBoardAndPreparationUi);
+}
 
 // Claim public job-detail routes before the static homepage can remain visible.
 const isJobDetailRoute = window.location.pathname.startsWith("/jobs/");
