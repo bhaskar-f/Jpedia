@@ -46,7 +46,7 @@ body:not(.admin-shell) button {
   margin: 0 auto;
 
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) auto;
+  grid-template-columns: 150px minmax(0, 1fr) auto auto;
   align-items: center;
 
   position: relative;
@@ -153,6 +153,19 @@ body:not(.admin-shell) button {
   border: var(--border);
   white-space: nowrap;
 }
+.locale-selector-label { display: inline-flex; align-items: center; }
+.locale-selector {
+  min-height: 40px;
+  max-width: 118px;
+  padding: 0 8px;
+  border: var(--border);
+  border-radius: 0;
+  background: #fff;
+  color: #111;
+  font: 14px var(--font-button);
+}
+body.admin-shell .locale-selector-label,
+body.user-workspace-route .locale-selector-label { display: none !important; }
 
 .page {
   width: min(var(--site-width), calc(100% - 48px));
@@ -1857,7 +1870,7 @@ body.admin-shell #adminRoot {
 @media (max-width: 700px) {
   .site-header {
     width: calc(100% - 32px);
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: 28px minmax(0, 1fr) auto auto;
   }
 
   .main-nav {
@@ -2277,7 +2290,7 @@ body.public-route #publicPageRoot {
   .site-header {
     width: calc(100% - 32px);
     min-height: 68px;
-    grid-template-columns: 38px minmax(0, 1fr) auto;
+    grid-template-columns: 38px minmax(0, 1fr) auto auto;
   }
   .brand-mark {
     width: 36px;
@@ -2301,6 +2314,7 @@ body.public-route #publicPageRoot {
     padding: 0 8px;
     font-size: 13px;
   }
+  .locale-selector { min-height: 34px; max-width: 92px; padding: 0 4px; font-size: 12px; }
   .page {
     width: calc(100% - 32px);
     max-width: none;
@@ -2369,7 +2383,7 @@ body.public-route #publicPageRoot {
 }
 @media (max-width: 420px) {
   .site-header {
-    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-columns: 32px minmax(0, 1fr) auto auto;
   }
   .brand-mark {
     width: 30px;
@@ -3856,6 +3870,11 @@ body.board-details-shell .back-top-wrap { display: none !important; }
     justify-content: space-between;
     gap: 12px;
   }
+  body.home-page .site-header { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+  body.home-page .locale-selector-label { order: 2; }
+  body.home-page #loginBtn { order: 3; }
+  body.public-mobile-shell .locale-selector-label { order: 2; }
+  body.public-mobile-shell #loginBtn { order: 3; }
   body.public-mobile-shell .site-header .brand-mark {
     flex: 0 1 150px;
     width: 150px;
@@ -3876,6 +3895,8 @@ body.board-details-shell .back-top-wrap { display: none !important; }
     padding: 0;
     font-size: 0;
   }
+  body.home-page .locale-selector,
+  body.public-mobile-shell .locale-selector { min-height: 38px; max-width: 88px; padding: 0 3px; font-size: 12px; }
   body.public-mobile-shell #loginBtn .home-account-icon { display: block; width: 22px; height: 22px; flex: 0 0 22px; }
 
   body.home-page .site-footer,

@@ -3,6 +3,22 @@
   if (!jobDetailPath.startsWith("/jobs/")) return;
   const root = document.querySelector("#jobDetailRoot");
   if (!root) return;
+  const i18n = window.SetBGetI18n;
+  const t = (key, values) => i18n?.t(key, values) ?? key;
+  const formatNumber = (value) => i18n?.formatNumber(value) ?? String(value);
+  const formatMoney = (value) =>
+    typeof value === "number" && Number.isFinite(value)
+      ? i18n?.formatCurrency(value, "INR") ?? formatNumber(value)
+      : value;
+  const apiError = (error, fallbackKey) => {
+    if (error?.code || error?.status) {
+      const key = i18n?.errorKey(error);
+      const translated = key ? t(key) : key;
+      if (translated && translated !== key) return translated;
+    }
+    return error?.message || t(fallbackKey);
+  };
+  document.addEventListener("setbget:localechange", () => window.location.reload());
   const API_BASE = window.JPEDIA_CONFIG?.API_BASE_URL || window.JINFO_API_BASE || `${window.location.origin}/api`;
   const STATUSES = [
     "NOT_APPLIED",
@@ -15,6 +31,12 @@
     "SELECTED",
     "REJECTED",
   ];
+  const STATUS_KEYS = {
+    NOT_APPLIED: "statusNotApplied", APPLIED: "statusApplied", ADMIT_CARD: "statusAdmitCard",
+    EXAM_SCHEDULED: "statusExamScheduled", EXAM_COMPLETED: "statusExamCompleted",
+    RESULT: "statusResult", INTERVIEW: "statusInterview", SELECTED: "statusSelected", REJECTED: "statusRejected",
+  };
+  const translateStatus = (status) => t(`jobDetails.${STATUS_KEYS[status] || "statusNotApplied"}`);
   let user = null;
   let liveMessage = null;
   const el = (tag, cls = "", text) => {
@@ -35,7 +57,7 @@
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.success === false) {
       const error = new Error(
-        result.error?.message || `Request failed (${response.status})`,
+        result.error?.message || t("errors.requestFailed"),
       );
       error.status = response.status;
       error.code = result.error?.code;
@@ -56,16 +78,20 @@
             .filter(([, v]) => exists(v))
             .map(([key, v]) => `${key}: ${text(v)}`)
             .join(" · ")
-        : String(value ?? "");
+        : typeof value === "number" && Number.isFinite(value)
+          ? formatNumber(value)
+          : String(value ?? "");
   const date = (value) => {
     if (!value) return "";
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime())
       ? ""
-      : parsed.toLocaleDateString(undefined, {
+      : i18n?.formatDate(parsed, {
           day: "numeric",
           month: "long",
           year: "numeric",
+        }) || parsed.toLocaleDateString(undefined, {
+          day: "numeric", month: "long", year: "numeric",
         });
   };
   function safeUrl(value) {
@@ -127,8 +153,8 @@
   function renderAuthoringData(parent, job) {
     dataTable(
       parent,
-      "Important Dates",
-      ["Event", "Date", "Description"],
+      t("jobDetails.importantDates"),
+      [t("jobDetails.event"), t("jobDetails.date"), t("jobDetails.description")],
       (job.importantDates || []).map((x) => [
         x.event,
         date(x.date),
@@ -137,8 +163,8 @@
     );
     dataTable(
       parent,
-      "Vacancy Breakdown",
-      ["Post", "Vacancies", "Notes"],
+      t("jobDetails.vacancyBreakdown"),
+      [t("jobDetails.post"), t("jobDetails.vacancies"), t("jobDetails.notesLabel")],
       (job.vacancyBreakdown || []).map((x) => [
         x.post,
         x.vacancyCount,
@@ -147,8 +173,8 @@
     );
     dataTable(
       parent,
-      "Age Relaxation",
-      ["Category", "Relaxation", "Notes"],
+      t("jobDetails.ageRelaxations"),
+      [t("jobDetails.category"), t("jobDetails.relaxation"), t("jobDetails.notesLabel")],
       (job.ageRelaxations || []).map((x) => [
         x.category,
         x.relaxation,
@@ -157,14 +183,14 @@
     );
     dataTable(
       parent,
-      "Application Fees",
-      ["Category", "Fee", "Notes"],
+      t("jobDetails.applicationFees"),
+      [t("jobDetails.category"), t("jobDetails.fee"), t("jobDetails.notesLabel")],
       (job.applicationFees || []).map((x) => [x.category, x.fee, x.notes]),
     );
     dataTable(
       parent,
-      "Qualifications",
-      ["Requirement", "Field", "Condition", "Additional Requirement"],
+      t("jobDetails.qualifications"),
+      [t("jobDetails.requirement"), t("jobDetails.field"), t("jobDetails.condition"), t("jobDetails.additionalRequirement")],
       (job.qualifications || []).map((x) => [
         x.name,
         x.field,
@@ -173,7 +199,7 @@
       ]),
     );
     if (job.selectionStages?.length) {
-      const group = section(parent, "Selection Process");
+      const group = section(parent, t("jobDetails.selectionProcess"));
       const list = el("ol", "job-detail-list");
       job.selectionStages.forEach((stage) => {
         const item = el("li");
@@ -181,16 +207,16 @@
         if (stage.description) item.append(el("p", "", stage.description));
         const details = [
           stage.maximumMarks != null
-            ? `Maximum marks: ${stage.maximumMarks}`
+            ? t("jobDetails.maximumMarks", { value: stage.maximumMarks })
             : "",
           stage.qualifyingMarks != null
-            ? `Qualifying marks: ${stage.qualifyingMarks}`
+            ? t("jobDetails.qualifyingMarks", { value: stage.qualifyingMarks })
             : "",
           stage.qualifyingPercentage != null
-            ? `Qualifying: ${stage.qualifyingPercentage}%`
+            ? t("jobDetails.qualifyingPercentage", { value: stage.qualifyingPercentage })
             : "",
           stage.duration,
-          stage.weightage ? `Weightage: ${stage.weightage}` : "",
+          stage.weightage ? t("jobDetails.weightage", { value: stage.weightage }) : "",
         ].filter(Boolean);
         if (details.length) item.append(el("p", "", details.join(" · ")));
         if (stage.components?.length) {
@@ -200,7 +226,7 @@
               el(
                 "li",
                 "",
-                `${c.name}${c.maximumMarks != null ? ` · ${c.maximumMarks} marks` : ""}${c.qualifyingOnly ? " · qualifying only" : ""}`,
+                `${c.name}${c.maximumMarks != null ? ` · ${t("jobDetails.marks", { value: c.maximumMarks })}` : ""}${c.qualifyingOnly ? ` · ${t("jobDetails.qualifyingOnly")}` : ""}`,
               ),
             ),
           );
@@ -211,25 +237,25 @@
       group.append(list);
     }
     if (job.salaryInfo && Object.values(job.salaryInfo).some(exists)) {
-      const group = section(parent, "Pay and Salary");
+      const group = section(parent, t("jobDetails.payAndSalary"));
       const dl = el("dl", "job-detail-fields");
       for (const [label, key] of [
-        ["Pay level", "payLevel"],
-        ["Pay scale", "payScale"],
-        ["Grade pay", "gradePay"],
-        ["Minimum", "minimum"],
-        ["Maximum", "maximum"],
-        ["Description", "description"],
+        [t("jobDetails.payLevel"), "payLevel"],
+        [t("jobDetails.payScale"), "payScale"],
+        [t("jobDetails.gradePay"), "gradePay"],
+        [t("jobDetails.minimum"), "minimum"],
+        [t("jobDetails.maximum"), "maximum"],
+        [t("jobDetails.description"), "description"],
       ])
         field(dl, label, job.salaryInfo[key]);
       group.append(dl);
     }
     if (job.importantLinks?.length) {
-      const group = section(parent, "Important Links");
+      const group = section(parent, t("jobDetails.importantLinks"));
       const list = el("ul", "job-detail-list");
       job.importantLinks.forEach((item) => {
         const li = el("li");
-        const a = link(item.label || "Official link", item.url);
+        const a = link(item.label || t("jobDetails.officialLink"), item.url);
         if (a) li.append(a);
         if (item.description)
           li.append(el("span", "", ` · ${item.description}`));
@@ -239,21 +265,21 @@
       else group.remove();
     }
     if (job.documentsRequired?.length) {
-      const group = section(parent, "Documents Required");
+      const group = section(parent, t("jobDetails.documentsRequired"));
       const list = el("ul", "job-detail-list");
       job.documentsRequired.forEach((x) =>
         list.append(
           el(
             "li",
             "",
-            `${x.name}${x.required === false ? " (optional)" : ""}${x.description ? ` — ${x.description}` : ""}`,
+            `${x.name}${x.required === false ? ` (${t("jobDetails.optional")})` : ""}${x.description ? ` — ${x.description}` : ""}`,
           ),
         ),
       );
       group.append(list);
     }
     if (job.importantInstructions?.length) {
-      const group = section(parent, "Important Instructions");
+      const group = section(parent, t("jobDetails.importantInstructions"));
       const list = el("ul", "job-detail-list");
       job.importantInstructions.forEach((x) =>
         list.append(el("li", "", x.text)),
@@ -263,7 +289,7 @@
     if (job.posts?.length) {
       const buckets = new Map();
       job.posts.forEach((post) => {
-        const key = post.groupName || "Posts";
+        const key = post.groupName || t("jobDetails.posts");
         if (!buckets.has(key)) buckets.set(key, []);
         buckets.get(key).push(post);
       });
@@ -271,13 +297,13 @@
         const group = job.postGroups?.find((item) => item.name === groupName);
         const section = dataTable(
           parent,
-          `${groupName}${group?.totalVacancies != null ? ` — ${group.totalVacancies} vacancies` : ""}`,
-          ["Post", "Vacancies", "Age"],
+          group?.totalVacancies != null ? `${groupName} — ${t("jobDetails.groupVacancies", { count: group.totalVacancies })}` : groupName,
+          [t("jobDetails.post"), t("jobDetails.vacancies"), t("jobDetails.age")],
           posts.map((post) => [
             post.name,
             post.vacancyCount,
             post.ageMin != null || post.ageMax != null
-              ? `${post.ageMin ?? "Any"}–${post.ageMax ?? "Any"}${post.ageCutoffDate ? ` (as of ${date(post.ageCutoffDate)})` : ""}`
+              ? `${post.ageMin ?? t("jobDetails.any")}–${post.ageMax ?? t("jobDetails.any")}${post.ageCutoffDate ? ` ${t("jobDetails.asOfDate", { date: date(post.ageCutoffDate) })}` : ""}`
               : post.ageDescription,
           ]),
         );
@@ -305,12 +331,12 @@
     items.forEach((resource) => {
       if (!resource || typeof resource !== "object") return;
       const row = el("li");
-      row.append(el("strong", "", resource.title || "Resource"));
+      row.append(el("strong", "", resource.title || t("jobDetails.resource")));
       const year =
         resource.year || ((resource.exam || "").match(/\b20\d{2}\b/) || [])[0];
       const meta = [
-        year ? `Year: ${year}` : "",
-        resource.type ? `Type: ${resource.type.replaceAll("_", " ")}` : "",
+        year ? t("jobDetails.year", { year }) : "",
+        resource.type ? `${t("jobDetails.type")}: ${resource.type.replaceAll("_", " ")}` : "",
         resource.exam && !year ? resource.exam : "",
       ].filter(Boolean);
       if (meta.length)
@@ -319,15 +345,15 @@
       const uploaded =
         resource.sourceType === "UPLOAD" || Boolean(resource.cloudinaryUrl);
       const fileKind = (resource.mimeType || "").includes("pdf")
-        ? "PDF"
+        ? t("jobDetails.pdf")
         : (resource.mimeType || "").startsWith("image/")
-          ? "Image"
-          : "File";
+          ? t("jobDetails.image")
+          : t("jobDetails.file");
       const label = uploaded
-        ? `${fileKind} · ${resource.accessMode === "DOWNLOAD" ? "Download" : "Open in browser"}`
+        ? `${fileKind} · ${resource.accessMode === "DOWNLOAD" ? t("jobDetails.download") : t("jobDetails.openInBrowser")}`
         : resource.youtubeUrl
-          ? "Watch video · Open"
-          : "External link · Open";
+          ? t("jobDetails.watchVideoOpen")
+          : t("jobDetails.externalLinkOpen");
       const open = link(
         label,
         resource.externalUrl ||
@@ -348,17 +374,17 @@
       ? job.howToApplySteps.filter((step) => String(step).trim())
       : [];
     if (!videoId && !steps.length) return;
-    const group = section(parent, "How to Apply");
+    const group = section(parent, t("jobDetails.howToApply"));
     if (videoId) {
       const note = el(
         "p",
         "job-detail-video-note",
-        "Supplemental video guidance hosted on YouTube. Confirm requirements and instructions on the official recruitment website.",
+        t("jobDetails.videoGuidance"),
       );
       const frame = el("div", "job-detail-video-frame");
       const iframe = el("iframe");
       iframe.src = `https://www.youtube.com/embed/${videoId}`;
-      iframe.title = `How to apply for ${job.title || "this job"}`;
+      iframe.title = `${t("jobDetails.howToApplyFor")} ${job.title || t("jobDetails.fallbackTitle")}`;
       iframe.loading = "lazy";
       iframe.referrerPolicy = "strict-origin-when-cross-origin";
       iframe.allow =
@@ -373,9 +399,9 @@
       group.append(list);
     }
   }
-  function showSignIn(message, capability) {
-    message.replaceChildren(el("span", "", `Sign in to ${capability}. `));
-    const signIn = el("a", "", "Sign In");
+  function showSignIn(message, capabilityKey) {
+    message.replaceChildren(el("span", "", t("jobDetails.signInCapability", { capability: t(capabilityKey) }) + " "));
+    const signIn = el("a", "", t("jobDetails.signIn"));
     signIn.href = `/?auth=login&returnTo=${encodeURIComponent(window.location.pathname)}`;
     message.append(signIn);
   }
@@ -406,11 +432,11 @@
     host.replaceChildren();
     const form = el("form", "job-tracker-form");
     const statusLabel = el("label", "job-detail-control");
-    statusLabel.append(el("span", "", "Application Status"));
+    statusLabel.append(el("span", "", t("jobDetails.applicationStatus")));
     const status = el("select");
     status.name = "status";
     STATUSES.forEach((value) => {
-      const option = el("option", "", value.replaceAll("_", " "));
+      const option = el("option", "", translateStatus(value));
       option.value = value;
       option.selected = value === (existing?.status || "NOT_APPLIED");
       status.append(option);
@@ -418,9 +444,9 @@
     statusLabel.append(status);
     form.append(statusLabel);
     for (const [label, name] of [
-      ["Applied at", "appliedAt"],
-      ["Exam date", "examDate"],
-      ["Reminder", "reminderDate"],
+      [t("jobDetails.appliedAt"), "appliedAt"],
+      [t("jobDetails.examDate"), "examDate"],
+      [t("jobDetails.reminder"), "reminderDate"],
     ]) {
       const wrapper = el("label", "job-detail-control");
       wrapper.append(el("span", "", label));
@@ -432,8 +458,8 @@
       form.append(wrapper);
     }
     for (const [label, name] of [
-      ["Result", "result"],
-      ["Notes", "notes"],
+      [t("jobDetails.result"), "result"],
+      [t("jobDetails.notes"), "notes"],
     ]) {
       const wrapper = el("label", "job-detail-control");
       wrapper.append(el("span", "", label));
@@ -447,14 +473,14 @@
     const submit = el(
       "button",
       "job-detail-button is-primary",
-      existing ? "Save Application" : "Track Application",
+      existing ? t("jobDetails.saveApplication") : t("jobDetails.trackApplication"),
     );
     submit.type = "submit";
     form.append(submit, feedback);
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       submit.disabled = true;
-      submit.textContent = "Saving...";
+      submit.textContent = t("jobDetails.saving");
       feedback.textContent = "";
       const values = Object.fromEntries(new FormData(form));
       const payload = {
@@ -476,16 +502,15 @@
             });
         onSaved(saved);
       } catch (error) {
-        feedback.textContent =
-          error.status === 401
-            ? "Sign in to track an application."
-            : error.message;
+        feedback.textContent = error.status === 401
+          ? t("jobDetails.signInTrackError")
+          : apiError(error, "errors.requestFailed");
       } finally {
         submit.disabled = false;
-        if (submit.textContent === "Saving...")
+        if (submit.textContent === t("jobDetails.saving"))
           submit.textContent = existing
-            ? "Save Application"
-            : "Track Application";
+            ? t("jobDetails.saveApplication")
+            : t("jobDetails.trackApplication");
       }
     });
     host.append(form);
@@ -496,22 +521,22 @@
     const summary = el("div", "job-tracker-summary");
     const details = el("dl", "job-detail-meta job-tracker-summary-fields");
     for (const [label, name] of [
-      ["Status", "status"],
-      ["Applied at", "appliedAt"],
-      ["Exam date", "examDate"],
-      ["Reminder", "reminderDate"],
-      ["Result", "result"],
-      ["Notes", "notes"],
+      [t("jobDetails.status"), "status"],
+      [t("jobDetails.appliedAt"), "appliedAt"],
+      [t("jobDetails.examDate"), "examDate"],
+      [t("jobDetails.reminder"), "reminderDate"],
+      [t("jobDetails.result"), "result"],
+      [t("jobDetails.notes"), "notes"],
     ]) {
       let value = application[name];
       if (["appliedAt", "examDate", "reminderDate"].includes(name))
         value = date(value);
       if (name === "status" && value)
-        value = String(value).replaceAll("_", " ");
+        value = translateStatus(value);
       field(details, label, value);
     }
     summary.append(details);
-    const edit = el("button", "job-detail-button", "Edit Application");
+    const edit = el("button", "job-detail-button", t("jobDetails.editApplication"));
     edit.type = "button";
     edit.addEventListener("click", onEdit);
     summary.append(edit);
@@ -526,58 +551,60 @@
       publicHeader.after(root);
     const account = document.querySelector("#loginBtn");
     if (account) {
-      account.replaceChildren(
-        icon("account", "home-account-icon"),
-        document.createTextNode("Sign in"),
-      );
-      account.setAttribute("aria-label", "Sign in");
+      const label = el("span", "", t("navigation.signIn"));
+      label.dataset.i18n = "navigation.signIn";
+      account.replaceChildren(icon("account", "home-account-icon"), label);
+      account.dataset.i18nAriaLabel = "navigation.signIn";
+      account.setAttribute("aria-label", t("navigation.signIn"));
     }
     const mobileNav = document.querySelector("#mobileBottomNav");
     const items = [
-      ["Home", "/", "home"],
-      ["Jobs", "/jobs", "work"],
-      ["Community", "/communities", "people"],
-      ["Services", "/services", "list"],
+      ["navigation.home", "/", "home"],
+      ["navigation.jobs", "/jobs", "work"],
+      ["navigation.communities", "/communities", "people"],
+      ["navigation.services", "/services", "list"],
     ];
     if (mobileNav)
       mobileNav.replaceChildren(
         ...items.map(([label, href, symbol]) => {
           const item = el(
             "a",
-            `mobile-bottom-nav-link${label === "Jobs" ? " is-active" : ""}`,
+            `mobile-bottom-nav-link${label === "navigation.jobs" ? " is-active" : ""}`,
           );
           item.href = href;
-          if (label === "Jobs") item.setAttribute("aria-current", "page");
-          item.append(icon(symbol), el("span", "", label));
+          if (label === "navigation.jobs") item.setAttribute("aria-current", "page");
+          const text = el("span", "", t(label)); text.dataset.i18n = label;
+          item.append(icon(symbol), text);
           return item;
         }),
       );
     const page = el("div", "job-details-page");
     const main = el("main", "job-details-main");
-    main.append(el("p", "job-detail-loading", "Loading job..."));
+    main.append(el("p", "job-detail-loading", t("jobDetails.loading")));
     page.append(main);
     root.replaceChildren(page);
     return { page, main };
   }
   async function start() {
+    await i18n?.ready;
     const { page, main } = loadingPage();
     const crumbs = el("nav", "job-breadcrumbs");
-    crumbs.setAttribute("aria-label", "Breadcrumb");
-    const home = el("a", "", "Home");
+    crumbs.setAttribute("aria-label", t("jobDetails.breadcrumb"));
+    const home = el("a", "", t("navigation.home"));
     home.href = "/";
-    const jobs = el("a", "", "Jobs");
+    const jobs = el("a", "", t("navigation.jobs"));
     jobs.href = "/jobs";
     crumbs.append(home, el("span", "job-breadcrumb-separator", "→"), jobs);
     main.replaceChildren(
       crumbs,
-      el("p", "job-detail-loading", "Loading job..."),
+      el("p", "job-detail-loading", t("jobDetails.loading")),
     );
     const content = el("div", "job-details-content");
     main.append(content);
     const routeMatch = jobDetailPath.match(/^\/jobs\/([^/]+)$/);
     if (!routeMatch) {
       main.replaceChildren(crumbs, content);
-      content.replaceChildren(el("h1", "job-detail-error", "Job not found."));
+      content.replaceChildren(el("h1", "job-detail-error", t("jobDetails.notFound")));
       return;
     }
     let job;
@@ -591,22 +618,22 @@
           "h1",
           "job-detail-error",
           error.status === 404
-            ? "Job not found."
+            ? apiError(error, "jobDetails.notFound")
             : error.status === 410
-              ? "This job is no longer available."
-              : "Failed to load job.",
+              ? t("jobDetails.noLongerAvailable")
+              : t("jobDetails.loadFailed"),
         ),
       );
       return;
     }
     if (!job?._id) {
       main.replaceChildren(crumbs, content);
-      content.replaceChildren(el("h1", "job-detail-error", "Job not found."));
+      content.replaceChildren(el("h1", "job-detail-error", t("jobDetails.notFound")));
       return;
     }
     const canonical = `https://www.setbget.in/jobs/${encodeURIComponent(job.slug || job._id)}`;
-    const metaDescription = String(job.description || `${job.title || "Job details"}${job.organization ? ` at ${job.organization}` : ""}. Recruitment details and application information on SetBGet.`).replace(/\s+/g, " ").slice(0, 300);
-    document.title = `${job.title || "Job details"}${job.organization ? ` at ${job.organization}` : ""} | SetBGet`;
+    const metaDescription = String(job.description || `${job.title || t("jobDetails.fallbackTitle")}${job.organization ? ` at ${job.organization}` : ""}. ${t("jobDetails.metaDescription")}`).replace(/\s+/g, " ").slice(0, 300);
+    document.title = `${job.title || t("jobDetails.fallbackTitle")}${job.organization ? ` at ${job.organization}` : ""} | SetBGet`;
     const setMeta = (selector, attr, value, tag, key, keyValue) => {
       let node = document.head.querySelector(selector);
       if (!node) { node = document.createElement(tag); node.setAttribute(key, keyValue); document.head.append(node); }
@@ -627,7 +654,7 @@
     const currentCrumb = el(
       "span",
       "job-breadcrumb-current",
-      job.title || "Job details",
+      job.title || t("jobDetails.fallbackTitle"),
     );
     currentCrumb.setAttribute("aria-current", "page");
     crumbs.append(el("span", "job-breadcrumb-separator", "→"), currentCrumb);
@@ -648,8 +675,7 @@
             (item) => String(item.job?._id || item.job) === String(job._id),
           ) || null;
       } catch {
-        accountError =
-          "Your saved jobs and application tracking could not be loaded.";
+        accountError = t("jobDetails.savedApplicationLoadFailed");
       }
     }
     const parsedDeadline = job.applicationDeadline
@@ -676,23 +702,23 @@
     if (headingMeta.length)
       header.append(el("p", "job-detail-subtitle", headingMeta.join(" · ")));
     const summary = el("dl", "job-detail-meta");
-    field(summary, "Organization", job.organization);
-    field(summary, "Vacancies", job.vacancyCount);
-    field(summary, "Location", job.location);
-    field(summary, "Application Deadline", date(job.applicationDeadline));
-    field(summary, "Status", closed ? "Application Closed" : "Open");
+    field(summary, t("jobDetails.organization"), job.organization);
+    field(summary, t("jobDetails.vacancies"), job.vacancyCount);
+    field(summary, t("jobDetails.location"), job.location);
+    field(summary, t("jobDetails.applicationDeadline"), date(job.applicationDeadline));
+    field(summary, t("jobDetails.status"), closed ? t("jobDetails.applicationClosed") : t("jobDetails.open"));
     header.append(summary);
     content.replaceChildren(header);
     const actions = el("section", "job-detail-actions");
     if (closed)
-      actions.append(el("p", "job-detail-closed", "Application Closed"));
+      actions.append(el("p", "job-detail-closed", t("jobDetails.applicationClosed")));
     const applyUrl = safeUrl(job.officialApplyUrl);
     const websiteUrl = safeUrl(job.officialWebsite);
     if (!closed && applyUrl) {
       const apply = el(
         "a",
         "job-detail-button is-primary",
-        "Apply on Official Website ↗",
+        t("jobDetails.applyOfficial"),
       );
       apply.href = applyUrl;
       apply.target = "_blank";
@@ -702,14 +728,14 @@
         el(
           "p",
           "job-detail-external-note",
-          "You are leaving SetBGet for the official recruitment website.",
+          t("jobDetails.leavingOfficialRecruitment"),
         ),
       );
     } else if (!closed && websiteUrl) {
       const website = el(
         "a",
         "job-detail-button is-primary",
-        "Visit Official Website ↗",
+        t("jobDetails.visitOfficial"),
       );
       website.href = websiteUrl;
       website.target = "_blank";
@@ -719,26 +745,26 @@
         el(
           "p",
           "job-detail-external-note",
-          "You are leaving SetBGet for the official website.",
+          t("jobDetails.leavingOfficial"),
         ),
       );
     } else if (!closed)
       actions.append(
-        el("p", "job-detail-muted", "Application link unavailable."),
+        el("p", "job-detail-muted", t("jobDetails.applicationLinkUnavailable")),
       );
     const message = el("p", "job-detail-message");
     liveMessage = message;
-    const share = el("button", "job-detail-button job-detail-share", "Share");
+    const share = el("button", "job-detail-button job-detail-share", t("jobDetails.share"));
     share.type = "button";
-    share.setAttribute("aria-label", `Share ${job.title || "this job"}`);
+    share.setAttribute("aria-label", `${t("jobDetails.shareJobAria")} ${job.title || t("jobDetails.fallbackTitle")}`);
     share.addEventListener("click", async () => {
       const shareUrl = new URL(
         `/jobs/${encodeURIComponent(job.slug || job._id)}`,
         window.location.origin,
       ).href;
       const data = {
-        title: job.title || "SetBGet job listing",
-        text: `View ${job.title || "this job"}${job.organization ? ` at ${job.organization}` : ""} on SetBGet.`,
+        title: job.title || t("jobDetails.shareFallbackTitle"),
+        text: `${t("jobDetails.shareViewPrefix")} ${job.title || t("jobDetails.fallbackTitle")}${job.organization ? ` ${t("jobDetails.atOrganization")} ${job.organization}` : ""} ${t("jobDetails.shareOnSuffix")}`,
         url: shareUrl,
       };
       try {
@@ -759,37 +785,37 @@
             throw new Error("Clipboard unavailable");
           input.remove();
         }
-        message.textContent = "Job link copied.";
+        message.textContent = t("jobDetails.jobLinkCopied");
       } catch (error) {
         if (error.name !== "AbortError")
           message.textContent =
-            "Could not copy the link. Please copy the page address.";
+            t("jobDetails.copyFailed");
       }
     });
     const controls = el("div", "job-detail-user-actions");
     const save = el(
       "button",
       "job-detail-button",
-      isSaved ? "Saved" : "Save Job",
+      isSaved ? t("jobDetails.saved") : t("jobDetails.saveJob"),
     );
     save.type = "button";
     save.disabled = isSaved;
-    const unsave = el("button", "job-detail-button", "Unsave");
+    const unsave = el("button", "job-detail-button", t("jobDetails.unsave"));
     unsave.type = "button";
     unsave.hidden = !isSaved;
     const track = el(
       "button",
       "job-detail-button",
-      application ? "Update Application" : "Track Application",
+      application ? t("jobDetails.updateApplication") : t("jobDetails.trackApplication"),
     );
     track.type = "button";
     const tracker = el("div", "job-detail-tracker");
     const openTracker = () =>
       addApplicationForm(tracker, String(job._id), application, (saved) => {
         application = saved;
-        track.textContent = "Update Application";
+        track.textContent = t("jobDetails.updateApplication");
         renderApplicationSummary(tracker, saved, openTracker);
-        message.textContent = "Application tracking saved.";
+        message.textContent = t("jobDetails.applicationSaved");
       });
     if (application)
       renderApplicationSummary(tracker, application, openTracker);
@@ -798,19 +824,19 @@
       actions.append(controls, message, tracker);
       save.addEventListener("click", async () => {
         if (!user) {
-          showSignIn(message, "save this job");
+          showSignIn(message, "jobDetails.capabilitySave");
           return;
         }
         save.disabled = true;
-        save.textContent = "Saving...";
+        save.textContent = t("jobDetails.saving");
         try {
           await api(`/saved-jobs/${job._id}`, { method: "POST" });
           isSaved = true;
-          save.textContent = "Saved";
+          save.textContent = t("jobDetails.saved");
           unsave.hidden = false;
         } catch (error) {
-          message.textContent = error.message;
-          save.textContent = "Save Job";
+          message.textContent = apiError(error, "errors.requestFailed");
+          save.textContent = t("jobDetails.saveJob");
         } finally {
           save.disabled = isSaved;
         }
@@ -820,19 +846,19 @@
         try {
           await api(`/saved-jobs/${job._id}`, { method: "DELETE" });
           isSaved = false;
-          save.textContent = "Save Job";
+          save.textContent = t("jobDetails.saveJob");
           save.disabled = false;
           unsave.hidden = true;
-          message.textContent = "Job removed from saved jobs.";
+          message.textContent = t("jobDetails.jobRemovedFromSaved");
         } catch (error) {
-          message.textContent = error.message;
+          message.textContent = apiError(error, "errors.requestFailed");
         } finally {
           unsave.disabled = false;
         }
       });
       track.addEventListener("click", () => {
         if (!user) {
-          showSignIn(message, "track an application");
+          showSignIn(message, "jobDetails.capabilityTrack");
           return;
         }
         openTracker();
@@ -849,16 +875,16 @@
         el(
           "p",
           "job-detail-closed-note",
-          "This job is no longer available for applications.",
+          t("jobDetails.noLongerAcceptingApplications"),
         ),
       );
     const sections = el("div", "job-detail-sections");
-    const facts = section(sections, "Job Information");
+    const facts = section(sections, t("jobDetails.jobInformation"));
     const hasMin = exists(job.ageMin),
       hasMax = exists(job.ageMax);
     const age =
       hasMin || hasMax
-        ? `${hasMin ? job.ageMin : "Any"}${hasMax ? `–${job.ageMax}` : ""} years`
+        ? t("jobDetails.ageYears", { age: `${hasMin ? formatNumber(job.ageMin) : t("jobDetails.any")}${hasMax ? `–${formatNumber(job.ageMax)}` : ""}` })
         : "";
     const varying = new Map(
       (job.conditionalFields || [])
@@ -866,57 +892,57 @@
         .map((x) => [x.field, x]),
     );
     const display = (key, value) =>
-      varying.has(key) ? "Varies by post/category" : value;
+      varying.has(key) ? t("jobDetails.variesByPost") : value;
     for (const [label, value] of [
-      ["Vacancy Count", display("vacancyCount", job.vacancyCount)],
-      ["Application Start Date", date(job.applicationStartDate)],
-      ["Application Deadline", date(job.applicationDeadline)],
-      ["Exam Date", date(job.examDate)],
-      ["Qualification", display("qualification", job.qualification)],
-      ["Age Limit", display("ageLimit", age)],
-      ["Age Relaxation", job.ageRelaxation],
-      ["Location", display("location", job.location)],
-      ["Salary", display("salary", job.salary)],
-      ["Selection Process", display("selectionProcess", job.selectionProcess)],
-      ["Application Fee", display("applicationFee", job.applicationFee)],
-      ["Category Eligibility", job.categoryEligibility],
-      ["Gender Eligibility", job.genderEligibility],
+      [t("jobDetails.vacancyCount"), display("vacancyCount", job.vacancyCount)],
+      [t("jobDetails.applicationStartDate"), date(job.applicationStartDate)],
+      [t("jobDetails.applicationDeadline"), date(job.applicationDeadline)],
+      [t("jobDetails.examDate"), date(job.examDate)],
+      [t("jobDetails.qualification"), display("qualification", job.qualification)],
+      [t("jobDetails.ageLimit"), display("ageLimit", age)],
+      [t("jobDetails.ageRelaxation"), job.ageRelaxation],
+      [t("jobDetails.location"), display("location", job.location)],
+      [t("jobDetails.salary"), display("salary", formatMoney(job.salary))],
+      [t("jobDetails.selectionProcess"), display("selectionProcess", job.selectionProcess)],
+      [t("jobDetails.applicationFee"), display("applicationFee", formatMoney(job.applicationFee))],
+      [t("jobDetails.categoryEligibility"), job.categoryEligibility],
+      [t("jobDetails.genderEligibility"), job.genderEligibility],
     ])
       field(facts, label, value);
     if (!facts.querySelector("dd")) facts.remove();
     if (varying.size && window.JInfoJobContent)
       sections.append(window.JInfoJobContent.renderConditionalFields(job));
     if (job.description) {
-      section(sections, "About this Recruitment").append(
+      section(sections, t("jobDetails.aboutRecruitment")).append(
         el("p", "job-detail-paragraph", job.description),
       );
     }
     renderHowToApply(sections, job);
     renderAuthoringData(sections, job);
-    listSection(sections, "Syllabus", job.syllabusResources);
-    listSection(sections, "Previous Year Papers", job.pyqResources);
-    listSection(sections, "Mock Tests", job.mockTestResources);
-    listSection(sections, "Study Materials", job.studyResources);
-    listSection(sections, "Other Resources", job.otherResources);
+    listSection(sections, t("jobDetails.syllabus"), job.syllabusResources);
+    listSection(sections, t("jobDetails.previousYearPapers"), job.pyqResources);
+    listSection(sections, t("jobDetails.mockTests"), job.mockTestResources);
+    listSection(sections, t("jobDetails.studyMaterials"), job.studyResources);
+    listSection(sections, t("jobDetails.otherResources"), job.otherResources);
     const sourceRows = [];
-    if (job.source?.name) sourceRows.push(["Source", job.source.name]);
+    if (job.source?.name) sourceRows.push([t("jobDetails.source"), job.source.name]);
     if (job.source?.organization)
-      sourceRows.push(["Organization", job.source.organization]);
+      sourceRows.push([t("jobDetails.organization"), job.source.organization]);
     if (job.source?.websiteUrl || job.sourceUrl)
       sourceRows.push([
-        "Source website",
+        t("jobDetails.sourceWebsite"),
         job.source?.websiteUrl || job.sourceUrl,
       ]);
     if (job.officialWebsite)
-      sourceRows.push(["Official website", job.officialWebsite]);
+      sourceRows.push([t("jobDetails.officialWebsite"), job.officialWebsite]);
     if (job.officialNotificationUrl)
-      sourceRows.push(["Official notification", job.officialNotificationUrl]);
+      sourceRows.push([t("jobDetails.officialNotification"), job.officialNotificationUrl]);
     if (sourceRows.length) {
-      const sourceSection = section(sections, "Official Source");
+      const sourceSection = section(sections, t("jobDetails.officialSource"));
       const list = el("ul", "job-detail-source-list");
       sourceRows.forEach(([label, value]) => {
         const row = el("li");
-        if (["Source website", "Official website", "Official notification"].includes(label)) {
+        if ([t("jobDetails.sourceWebsite"), t("jobDetails.officialWebsite"), t("jobDetails.officialNotification")].includes(label)) {
           const sourceLink = link(`${label} ↗`, value);
           row.append(sourceLink || el("span", "", label));
         } else {
@@ -931,7 +957,7 @@
         `/jobs/public/${encodeURIComponent(String(job._id))}/related`,
       );
       if (Array.isArray(related) && related.length) {
-        const group = section(sections, "Related Jobs");
+        const group = section(sections, t("jobDetails.relatedJobs"));
         group.classList.add("job-related-section");
         const cards = el("div", "job-related-grid");
         related
@@ -950,7 +976,7 @@
             );
             const info = el("div", "job-info");
             info.append(
-              el("div", "job-name", item.title || "Job"),
+              el("div", "job-name", item.title || t("jobDetails.fallbackTitle")),
               el("div", "job-org", item.organization || item.board?.name || ""),
             );
             card.append(icon, info);
@@ -960,10 +986,10 @@
                 el(
                   "div",
                   "deadline job-related-deadline",
-                  `Last Apply: ${date(item.applicationDeadline)}`,
+                  t("jobDetails.lastApply", { date: date(item.applicationDeadline) }),
                 ),
               );
-            const more = el("a", "small-btn", "More Info");
+            const more = el("a", "small-btn", t("jobDetails.moreInfo"));
             more.href = `/jobs/${encodeURIComponent(item.slug || item._id)}`;
             actions.append(more);
             card.append(actions);
@@ -974,7 +1000,7 @@
           const params = new URLSearchParams({ excludeJobId: String(job._id) });
           if (job.board?.slug) params.set("board", job.board.slug);
           else if (job.category) params.set("category", job.category);
-          const all = el("a", "job-related-all", "View All Related Jobs →");
+          const all = el("a", "job-related-all", t("jobDetails.viewAllRelated"));
           all.href = `/jobs?${params.toString()}`;
           group.append(all);
         } else group.remove();

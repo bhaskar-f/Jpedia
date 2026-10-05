@@ -1,5 +1,6 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const t = (key, values) => window.SetBGetI18n?.t(key, values) ?? key;
 const API_BASE = window.JPEDIA_CONFIG?.API_BASE_URL || window.JINFO_API_BASE || `${window.location.origin}/api`;
 const state = {
   data: null,
@@ -105,14 +106,19 @@ function enhancePasswordInput(input) {
   const toggle = document.createElement("button");
   toggle.className = "password-visibility-toggle";
   toggle.type = "button";
-  toggle.setAttribute("aria-label", "Show password");
-  toggle.setAttribute("title", "Show password");
+  toggle.dataset.i18nAriaLabel = "accessibility.showPassword";
+  toggle.dataset.i18nTitle = "accessibility.showPassword";
+  toggle.setAttribute("aria-label", t("accessibility.showPassword"));
+  toggle.setAttribute("title", t("accessibility.showPassword"));
   toggle.setAttribute("aria-pressed", "false");
   toggle.append(icon("eye"));
   toggle.addEventListener("click", () => {
     const show = input.type === "password";
     input.type = show ? "text" : "password";
-    const label = show ? "Hide password" : "Show password";
+    const labelKey = show ? "accessibility.hidePassword" : "accessibility.showPassword";
+    const label = t(labelKey);
+    toggle.dataset.i18nAriaLabel = labelKey;
+    toggle.dataset.i18nTitle = labelKey;
     toggle.replaceChildren(icon(show ? "eyeOff" : "eye"));
     toggle.setAttribute("aria-label", label);
     toggle.setAttribute("title", label);
@@ -236,19 +242,20 @@ function setCurrentUser(user) {
   state.currentUser = user || null;
   const button = $("#loginBtn");
   if (button) {
-    const label = !user
-      ? "Sign in / Register"
-      : user.role === "USER"
-        ? "Dashboard"
-        : `${user.name || "Account"} · ${user.role || "USER"}`;
+    const labelKey = !user ? "navigation.signInRegister" : user.role === "USER" ? "navigation.dashboard" : null;
+    const label = labelKey ? t(labelKey) : `${user.name || "Account"} · ${user.role || "USER"}`;
+    const labelElement = node("span", "", label);
+    if (labelKey) labelElement.dataset.i18n = labelKey;
     if (
       document.body.classList.contains("home-page") ||
       document.body.classList.contains("public-mobile-shell")
     ) {
-      button.replaceChildren(icon("account", "home-account-icon"), document.createTextNode(label));
+      button.replaceChildren(icon("account", "home-account-icon"), labelElement);
+      if (labelKey) button.dataset.i18nAriaLabel = labelKey;
+      else delete button.dataset.i18nAriaLabel;
       button.setAttribute("aria-label", label);
     } else {
-      button.textContent = label;
+      button.replaceChildren(labelElement);
     }
   }
 }
@@ -988,11 +995,11 @@ function mapApiJob(job) {
     qualification: job.qualification || "",
     icon: job.category === "police" ? "shield" : "document",
     deadline: job.applicationDeadline
-      ? new Date(job.applicationDeadline).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
+      ? (window.SetBGetI18n?.formatDate(job.applicationDeadline, {
+          day: "numeric", month: "short", year: "numeric",
+        }) || new Date(job.applicationDeadline).toLocaleDateString(undefined, {
+          day: "numeric", month: "short", year: "numeric",
+        }))
       : "See official notice",
   };
 }
@@ -1444,23 +1451,29 @@ if (
   document.body.classList.add("home-page");
   const account = $("#loginBtn");
   if (account) {
-    account.replaceChildren(icon("account", "home-account-icon"), document.createTextNode("Sign in / Register"));
-    account.setAttribute("aria-label", "Sign in / Register");
+    const label = node("span", "", t("navigation.signInRegister"));
+    label.dataset.i18n = "navigation.signInRegister";
+    account.replaceChildren(icon("account", "home-account-icon"), label);
+    account.dataset.i18nAriaLabel = "navigation.signInRegister";
+    account.setAttribute("aria-label", t("navigation.signInRegister"));
   }
   const mobileNav = $("#mobileBottomNav");
   if (mobileNav) {
     const links = [
-      ["Home", "/", "home"],
-      ["Jobs", "/jobs", "work"],
-      ["Community", "/communities", "people"],
-      ["Services", "/services", "list"],
+      ["navigation.home", "/", "home"],
+      ["navigation.jobs", "/jobs", "work"],
+      ["navigation.communities", "/communities", "people"],
+      ["navigation.services", "/services", "list"],
     ];
     mobileNav.replaceChildren(
       ...links.map(([label, href, symbol], index) => {
         const link = node("a", `mobile-bottom-nav-link${index === 0 ? " is-active" : ""}`);
         link.href = href;
+        link.dataset.i18nKey = label;
         if (index === 0) link.setAttribute("aria-current", "page");
-        link.append(icon(symbol), node("span", "", label));
+        const labelElement = node("span", "", t(label));
+        labelElement.dataset.i18n = label;
+        link.append(icon(symbol), labelElement);
         return link;
       }),
     );
@@ -1469,15 +1482,19 @@ if (
 } else if (/^\/(jobs|boards)\//.test(window.location.pathname)) {
   const account = $("#loginBtn");
   if (account) {
-    const setAccountLabel = (label) => {
+    const setAccountLabel = (label, key = null) => {
+      const labelElement = node("span", "", label);
+      if (key) labelElement.dataset.i18n = key;
       if (document.body.classList.contains("job-details-shell")) {
         account.replaceChildren(
           icon("account", "home-account-icon"),
-          document.createTextNode(label),
+          labelElement,
         );
+        if (key) account.dataset.i18nAriaLabel = key;
+        else delete account.dataset.i18nAriaLabel;
         account.setAttribute("aria-label", label);
       } else {
-        account.textContent = label;
+        account.replaceChildren(labelElement);
       }
     };
     account.addEventListener("click", async () => {
@@ -1502,14 +1519,10 @@ if (
     api("/users/me")
       .then((result) => {
         const user = result.user;
-        setAccountLabel(
-          user.role === "USER"
-            ? "Dashboard"
-            : `${user.name || "Account"} · ${user.role}`,
-        );
+        setAccountLabel(user.role === "USER" ? t("navigation.dashboard") : `${user.name || "Account"} · ${user.role}`, user.role === "USER" ? "navigation.dashboard" : null);
       })
       .catch(() => {
-        setAccountLabel("Sign in");
+        setAccountLabel(t("navigation.signIn"), "navigation.signIn");
       });
   }
   document.addEventListener("click", (event) => {

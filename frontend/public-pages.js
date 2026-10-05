@@ -1,10 +1,24 @@
 (() => {
+  const i18n = window.SetBGetI18n;
+  const t = (key, values) => window.SetBGetI18n?.t(key, values) ?? key;
+  const formatDate = (value, options) =>
+    i18n?.formatDate(value, options) || new Date(value).toLocaleDateString();
+  const apiError = (error, fallbackKey) => {
+    if (error?.code || error?.status) {
+      const key = i18n?.errorKey(error);
+      const translated = key ? t(key) : key;
+      if (translated && translated !== key) return translated;
+    }
+    return error?.message || t(fallbackKey);
+  };
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
   const root = document.querySelector("#publicPageRoot");
   const routePaths = ["/jobs", "/communities", "/notifications", "/faqs", "/dashboard", "/dashboard/saved", "/dashboard/applications", "/dashboard/notifications", "/profile", "/settings", "/services", "/services/preparation", "/services/eligibility", "/services/tracker", "/boards", "/privacy", "/terms", "/about", "/contact"];
   const isCommunityDetail = path.startsWith("/communities/");
   const userWorkspaceRoute = path === "/dashboard" || path.startsWith("/dashboard/") || path === "/profile" || path === "/settings";
   if (!root || (!routePaths.includes(path) && !path.startsWith("/dashboard/") && !isCommunityDetail)) return;
+  if (path === "/jobs")
+    document.addEventListener("setbget:localechange", () => location.reload());
   root.hidden = false;
   document.body.classList.add("public-route");
   if(userWorkspaceRoute)document.body.classList.add("user-workspace-route");
@@ -15,29 +29,33 @@
   if (mobilePublicRoute) {
     document.body.classList.add("public-mobile-shell");
     const mobileNav = document.querySelector("#mobileBottomNav");
-    const active = path === "/jobs" ? "Jobs"
-      : path === "/communities" || path.startsWith("/communities/") ? "Community"
-        : path.startsWith("/services") ? "Services" : "";
-    const items = [["Home", "/", "home"], ["Jobs", "/jobs", "work"], ["Community", "/communities", "people"], ["Services", "/services", "list"]];
+    const active = path === "/jobs" ? "navigation.jobs"
+      : path === "/communities" || path.startsWith("/communities/") ? "navigation.communities"
+        : path.startsWith("/services") ? "navigation.services" : "navigation.home";
+    const items = [["navigation.home", "/", "home"], ["navigation.jobs", "/jobs", "work"], ["navigation.communities", "/communities", "people"], ["navigation.services", "/services", "list"]];
     if (mobileNav) mobileNav.replaceChildren(...items.map(([label, href, symbol]) => {
       const link = document.createElement("a");
+      const translated = t(label);
       link.className = `mobile-bottom-nav-link${label === active ? " is-active" : ""}`;
       link.href = href;
       if (label === active) link.setAttribute("aria-current", "page");
-      link.append(icon(symbol), Object.assign(document.createElement("span"), { textContent: label }));
+      const text = document.createElement("span"); text.textContent = translated; text.dataset.i18n = label;
+      link.append(icon(symbol), text);
       return link;
     }));
     const account = document.querySelector("#loginBtn");
     if (account) {
-      account.replaceChildren(icon("account", "home-account-icon"), document.createTextNode("Sign in"));
-      account.setAttribute("aria-label", "Sign in");
+      const label = document.createElement("span"); label.textContent = t("navigation.signIn"); label.dataset.i18n = "navigation.signIn";
+      account.replaceChildren(icon("account", "home-account-icon"), label);
+      account.dataset.i18nAriaLabel = "navigation.signIn";
+      account.setAttribute("aria-label", t("navigation.signIn"));
     }
   }
   document.addEventListener("click", event => { const menu = document.querySelector(".services-menu"); if (menu?.open && !menu.contains(event.target)) menu.open = false; });
   document.addEventListener("keydown", event => { if (event.key === "Escape") { const menu = document.querySelector(".services-menu"); if (menu) menu.open = false; } });
   const statuses = ["NOT_APPLIED", "APPLIED", "ADMIT_CARD", "EXAM_SCHEDULED", "EXAM_COMPLETED", "RESULT", "INTERVIEW", "SELECTED", "REJECTED"];
   const add = (parent, tag, cls, text) => { const item = document.createElement(tag); if (cls) item.className = cls; if (text !== undefined) item.textContent = text; parent.append(item); return item; };
-  const initialLoading = add(root, "p", "public-page-loading", "Loading SetBGet…"); initialLoading.setAttribute("role", "status");
+  const initialLoading = add(root, "p", "public-page-loading", t("loading.publicPage")); initialLoading.dataset.i18n = "loading.publicPage"; initialLoading.setAttribute("role", "status");
   const link = (parent, href, text, cls = "") => { const a = add(parent, "a", cls, text); a.href = href; return a; };
   const button = (parent, text, onClick, cls = "") => { const b = add(parent, "button", cls, text); b.type = "button"; b.addEventListener("click", onClick); return b; };
   const queryString = values => { const params = new URLSearchParams(); Object.entries(values).forEach(([key, value]) => { if (value) params.set(key, value); }); return params.toString(); };
@@ -140,44 +158,46 @@
   }
   function loginFor(destination) { const to = destination.startsWith("/") && !destination.startsWith("//") ? destination : "/dashboard"; window.location.assign(`/?auth=login&returnTo=${encodeURIComponent(to)}`); }
   async function getUser() { try { return (await api("/users/me")).user; } catch (error) { if (error.status !== 401) throw error; try { await api("/auth/refresh", { method: "POST" }); return (await api("/users/me")).user; } catch { return null; } } }
-  function setAccount(user) { const account = document.querySelector("#loginBtn"); if (!account) return; const label = !user ? "Sign in" : user.role === "USER" ? "Dashboard" : `${user.name || "Account"} · ${user.role}`; if (document.body.classList.contains("public-mobile-shell")) { account.replaceChildren(icon("account", "home-account-icon"), document.createTextNode(label)); account.setAttribute("aria-label", label); } else account.textContent = label; account.onclick = () => { if (!user) return loginFor(path); if (user.role === "USER") return window.location.assign("/dashboard"); window.location.assign(user.role === "AUTHOR" ? "/admin/jobs" : "/admin"); }; }
-  function jobCard(parent, job) { const card = add(parent, "article", "public-card public-job-card"); link(card, `/jobs/${encodeURIComponent(job.slug || job._id)}`, job.title, "public-card-title"); add(card, "p", "", job.organization || ""); const facts = [job.board?.name || job.boardName, job.category, job.qualification, job.location, job.applicationDeadline ? `Deadline · ${new Date(job.applicationDeadline).toLocaleDateString()}` : ""].filter(Boolean); if (facts.length) add(card, "p", "public-card-meta", facts.join(" · ")); }
-  function pager(parent, meta, onPage) { parent.querySelectorAll(":scope > .public-pagination").forEach(item => item.remove()); if (!meta || meta.total <= meta.limit) return; const bar = add(parent, "nav", "public-pagination"); add(bar, "span", "", `Page ${meta.page} · ${meta.total} results`); const prev = button(bar, "Previous", () => onPage(meta.page - 1)); prev.disabled = meta.page <= 1; const next = button(bar, "Next", () => onPage(meta.page + 1)); next.disabled = !meta.hasNextPage; }
+  function setAccount(user) { const account = document.querySelector("#loginBtn"); if (!account) return; const key = !user ? "navigation.signIn" : user.role === "USER" ? "navigation.dashboard" : null; const label = key ? t(key) : `${user.name || "Account"} · ${user.role}`; const text = add(document.createDocumentFragment(), "span", "", label); if (key) text.dataset.i18n = key; if (document.body.classList.contains("public-mobile-shell")) { account.replaceChildren(icon("account", "home-account-icon"), text); if (key) account.dataset.i18nAriaLabel = key; else delete account.dataset.i18nAriaLabel; account.setAttribute("aria-label", label); } else account.replaceChildren(text); account.onclick = () => { if (!user) return loginFor(path); if (user.role === "USER") return window.location.assign("/dashboard"); window.location.assign(user.role === "AUTHOR" ? "/admin/jobs" : "/admin"); }; }
+  function jobCard(parent, job) { const card = add(parent, "article", "public-card public-job-card"); link(card, `/jobs/${encodeURIComponent(job.slug || job._id)}`, job.title, "public-card-title"); add(card, "p", "", job.organization || ""); const facts = [job.board?.name || job.boardName, job.category, job.qualification, job.location, job.applicationDeadline ? t("jobs.deadline", { date: formatDate(job.applicationDeadline) }) : ""].filter(Boolean); if (facts.length) add(card, "p", "public-card-meta", facts.join(" · ")); }
+  function pager(parent, meta, onPage, localizedJobs = false) { parent.querySelectorAll(":scope > .public-pagination").forEach(item => item.remove()); if (!meta || meta.total <= meta.limit) return; const bar = add(parent, "nav", "public-pagination"); add(bar, "span", "", localizedJobs ? t("jobs.pageResults", { page: meta.page, count: meta.total }) : `Page ${meta.page} · ${meta.total} results`); const prev = button(bar, localizedJobs ? t("jobs.previous") : "Previous", () => onPage(meta.page - 1)); prev.disabled = meta.page <= 1; const next = button(bar, localizedJobs ? t("jobs.next") : "Next", () => onPage(meta.page + 1)); next.disabled = !meta.hasNextPage; }
   async function jobsPage(user) {
+    await i18n?.ready;
     const current = new URLSearchParams(location.search), currentPage = Math.max(1, Number(current.get("page")) || 1);
-    const wrap = page("Jobs", "Search current published recruitment notices and open the official job details.");
+    const wrap = page(t("jobs.title"), t("jobs.description"));
     if (user) await renderRecommendations(wrap, user);
-    else { const recommendations = section(wrap, "Recommended for You", "/?auth=login", "Sign in"); notice(recommendations, "Sign in to get job recommendations based on your qualification and preferences."); }
-    const results = section(wrap, "Find Jobs", "/jobs", "Results");
+    else { const recommendations = section(wrap, t("jobs.recommendedForYou"), "/?auth=login", t("jobs.signIn")); notice(recommendations, t("jobs.signInPrompt")); }
+    const results = section(wrap, t("jobs.findJobs"), "/jobs", t("jobs.results"));
     const form = add(results, "form", "public-filter-form");
     if (current.get("excludeJobId")) { const excluded = add(form, "input"); excluded.type = "hidden"; excluded.name = "excludeJobId"; excluded.value = current.get("excludeJobId"); }
     const boards = await apiCollection("/boards?page=1&limit=100");
     const field = (label, name, type = "search", value = "") => { const l = add(form, "label", "public-field"); add(l, "span", "", label); const input = add(l, "input"); input.name = name; input.type = type; input.value = value || ""; return input; };
-    field("Search", "q", "search", current.get("q"));
-    const select = (label, name, options, value = "") => { const l = add(form, "label", "public-field"); add(l, "span", "", label); const s = add(l, "select"); s.name = name; s.append(new Option(`All ${label.toLowerCase()}`, "")); options.forEach(([text, key]) => s.append(new Option(text, key))); s.value = value || ""; return s; };
-    select("Board", "board", boards.map(b => [b.name, b.slug]), current.get("board"));
-    field("Category", "category", "text", current.get("category"));
-    field("Qualification", "qualification", "text", current.get("qualification"));
-    field("Location", "location", "text", current.get("location"));
-    field("Deadline after", "deadlineAfter", "date", current.get("deadlineAfter"));
-    field("Deadline before", "deadlineBefore", "date", current.get("deadlineBefore"));
-    const actions = add(form, "div", "public-form-actions"); const submit = add(actions, "button", "small-btn", "Search jobs"); submit.type = "submit"; link(actions, "/jobs", "Clear filters", "public-text-link");
-    const list = add(results, "div", "public-card-list"); notice(list, "Loading published jobs…"); const pagination = add(results, "div");
+    field(t("jobs.search"), "q", "search", current.get("q"));
+    const searchInput = form.querySelector('input[name="q"]'); searchInput.placeholder = t("jobs.searchPlaceholder");
+    const select = (label, name, options, value = "", allLabel = `All ${label.toLowerCase()}`) => { const l = add(form, "label", "public-field"); add(l, "span", "", label); const s = add(l, "select"); s.name = name; s.append(new Option(allLabel, "")); options.forEach(([text, key]) => s.append(new Option(text, key))); s.value = value || ""; return s; };
+    select(t("jobs.board"), "board", boards.map(b => [b.name, b.slug]), current.get("board"), t("jobs.allBoards"));
+    field(t("jobs.category"), "category", "text", current.get("category"));
+    field(t("jobs.qualification"), "qualification", "text", current.get("qualification"));
+    field(t("jobs.location"), "location", "text", current.get("location"));
+    field(t("jobs.deadlineAfter"), "deadlineAfter", "date", current.get("deadlineAfter"));
+    field(t("jobs.deadlineBefore"), "deadlineBefore", "date", current.get("deadlineBefore"));
+    const actions = add(form, "div", "public-form-actions"); const submit = add(actions, "button", "small-btn", t("jobs.searchJobs")); submit.type = "submit"; link(actions, "/jobs", t("jobs.clearFilters"), "public-text-link");
+    const list = add(results, "div", "public-card-list"); notice(list, t("jobs.loading")); const pagination = add(results, "div");
     const load = async pageNumber => {
       const values = Object.fromEntries(new FormData(form)); values.page = pageNumber; values.limit = 20;
       const query = queryString(values); history.replaceState({}, "", `/jobs${query ? `?${query}` : ""}`);
-      list.replaceChildren(notice(list, "Loading published jobs…"));
-      try { const response = pageCollection(await apiPage(`/jobs?${query}`), "/jobs"); list.replaceChildren(); if (!response.items.length) notice(list, "No published jobs match these filters."); response.items.forEach(job => jobCard(list, job)); pager(pagination, response.pagination, load); }
-      catch { list.replaceChildren(); notice(list, "Jobs could not be loaded right now. Please try again later.", "is-error"); }
+      list.replaceChildren(notice(list, t("jobs.loading")));
+      try { const response = pageCollection(await apiPage(`/jobs?${query}`), "/jobs"); list.replaceChildren(); if (!response.items.length) notice(list, t("jobs.noMatchingFilters")); response.items.forEach(job => jobCard(list, job)); pager(pagination, response.pagination, load, true); }
+      catch { list.replaceChildren(); notice(list, t("jobs.loadError"), "is-error"); }
     };
     form.addEventListener("submit", event => { event.preventDefault(); load(1); });
-    try { const response = pageCollection(await apiPage(`/jobs?${queryString({ ...Object.fromEntries(current), page: currentPage, limit: 20 })}`), "/jobs"); list.replaceChildren(); if (!response.items.length) notice(list, "No published jobs match these filters."); response.items.forEach(job => jobCard(list, job)); pager(pagination, response.pagination, load); }
-    catch { list.replaceChildren(); notice(list, "Jobs could not be loaded right now. Please try again later.", "is-error"); }
+    try { const response = pageCollection(await apiPage(`/jobs?${queryString({ ...Object.fromEntries(current), page: currentPage, limit: 20 })}`), "/jobs"); list.replaceChildren(); if (!response.items.length) notice(list, t("jobs.noMatchingFilters")); response.items.forEach(job => jobCard(list, job)); pager(pagination, response.pagination, load, true); }
+    catch { list.replaceChildren(); notice(list, t("jobs.loadError"), "is-error"); }
   }
   async function renderRecommendations(parent, user) {
-    const block = section(parent, "Recommended for You", "/dashboard#preferences", "Edit preferences");
+    const block = section(parent, t("jobs.recommendedForYou"), "/dashboard#preferences", t("jobs.editPreferences"));
     const preferences = [user.education, user.location, ...(user.preferredExams || []), ...(user.preferredJobCategories || [])].filter(Boolean);
-    if (!preferences.length) { notice(block, "Add your qualification, location, preferred exams, or job categories in your dashboard to see matching published jobs."); return; }
+    if (!preferences.length) { notice(block, t("jobs.missingPreferences")); return; }
     const list = add(block, "div", "public-card-list");
     try {
       const candidates = await apiCollection("/jobs?page=1&limit=100");
@@ -188,15 +208,15 @@
         if (job.applicationDeadline && new Date(job.applicationDeadline).getTime() < today) return null;
         const category = `${job.category || ""} ${(job.tags || []).join(" ")}`.toLowerCase(), board = `${job.board?.name || job.boardName || ""} ${job.organization || ""}`.toLowerCase();
         const why = []; let score = 0;
-        if (categories.some(value => category.includes(value))) { score += 4; why.push("preferred category"); }
-        if (exams.some(value => board.includes(value))) { score += 3; why.push("preferred exam or board"); }
-        if (location && String(job.location || "").toLowerCase().includes(location)) { score += 2; why.push("location"); }
-        if (education && String(job.qualification || "").toLowerCase().includes(education)) { score += 2; why.push("qualification text"); }
+        if (categories.some(value => category.includes(value))) { score += 4; why.push(t("jobs.preferredCategory")); }
+        if (exams.some(value => board.includes(value))) { score += 3; why.push(t("jobs.preferredExamBoard")); }
+        if (location && String(job.location || "").toLowerCase().includes(location)) { score += 2; why.push(t("jobs.locationReason")); }
+        if (education && String(job.qualification || "").toLowerCase().includes(education)) { score += 2; why.push(t("jobs.qualificationReason")); }
         return score ? { job, score, why } : null;
       }).filter(Boolean).sort((a, b) => b.score - a.score || new Date(a.job.applicationDeadline || 8640000000000000) - new Date(b.job.applicationDeadline || 8640000000000000)).slice(0, 5);
-      if (!ranked.length) notice(list, "No current published jobs match your saved preferences. These matches are not an eligibility decision.");
-      ranked.forEach(({ job, why }) => { jobCard(list, job); add(list.lastElementChild, "p", "public-card-meta", `Matched on ${why.join(", ")}. Not an eligibility assessment.`); });
-    } catch (error) { notice(list, error.message || "Recommendations are temporarily unavailable.", "is-error"); }
+      if (!ranked.length) notice(list, t("jobs.noCurrentMatches"));
+      ranked.forEach(({ job, why }) => { jobCard(list, job); add(list.lastElementChild, "p", "public-card-meta", t("jobs.matchedCriteria", { reasons: why.join(", ") })); });
+    } catch (error) { notice(list, apiError(error, "jobs.recommendationsUnavailable"), "is-error"); }
   }
   async function communitiesPage(user) {
     const params = new URLSearchParams(location.search), wrap = page("Communities", "Find active communities by name, exam, or board.");
@@ -277,17 +297,17 @@
     const overlay=add(layout,"button","user-dashboard-drawer-backdrop");overlay.type="button";overlay.hidden=true;overlay.tabIndex=-1;overlay.setAttribute("aria-hidden","true");overlay.setAttribute("aria-label","Close dashboard navigation");
     const sidebar=add(layout,"aside","user-dashboard-sidebar");sidebar.id="userWorkspaceNavigation";sidebar.setAttribute("aria-label","User workspace navigation");
     const drawerHeader=add(sidebar,"div","user-dashboard-drawer-header");add(drawerHeader,"div","user-dashboard-brand","SetBGet");
-    const drawerClose=button(drawerHeader,"",()=>closeDrawer(),"user-dashboard-drawer-close");drawerClose.setAttribute("aria-label","Close navigation");drawerClose.append(icon("close"));
+    const drawerClose=button(drawerHeader,"",()=>closeDrawer(),"user-dashboard-drawer-close");drawerClose.dataset.i18nAriaLabel="accessibility.closeNavigation";drawerClose.setAttribute("aria-label",t("accessibility.closeNavigation"));drawerClose.append(icon("close"));
     const nav=add(sidebar,"nav","user-dashboard-nav");
     const items=[["Overview","/dashboard"],["Saved Jobs","/dashboard/saved"],["Applications","/dashboard/applications"],["Notifications","/dashboard/notifications"],["Profile","/profile"],["Settings","/settings"]];
     const activePath=path==="/dashboard"?"/dashboard":path;
     items.forEach(([name,href])=>{const a=link(nav,href,name,activePath===href?"is-active":"");if(activePath===href)a.setAttribute("aria-current","page");a.addEventListener("click",()=>closeDrawer(false));});
     const main=add(layout,"section","user-dashboard-main");
     const topbar=add(main,"header","user-workspace-topbar");
-    const menuButton=button(topbar,"",()=>setDrawerOpen(true),"user-workspace-menu-button");menuButton.setAttribute("aria-label","Open dashboard navigation");menuButton.setAttribute("aria-controls",sidebar.id);menuButton.setAttribute("aria-expanded","false");menuButton.append(icon("menu"));
+    const menuButton=button(topbar,"",()=>setDrawerOpen(true),"user-workspace-menu-button");menuButton.dataset.i18nAriaLabel="accessibility.openDashboardNavigation";menuButton.setAttribute("aria-label",t("accessibility.openDashboardNavigation"));menuButton.setAttribute("aria-controls",sidebar.id);menuButton.setAttribute("aria-expanded","false");menuButton.append(icon("menu"));
     add(topbar,"div","user-workspace-title","SetBGet · User Workspace");
     const actions=add(topbar,"div","user-workspace-actions");
-    const home=link(actions,"/","","user-workspace-home");home.setAttribute("aria-label","SetBGet Home");home.title="Home";home.append(icon("home","user-workspace-home-icon"));
+    const home=link(actions,"/","","user-workspace-home");home.dataset.i18nAriaLabel="accessibility.setbgetHome";home.dataset.i18nTitle="navigation.home";home.setAttribute("aria-label",t("accessibility.setbgetHome"));home.title=t("navigation.home");home.append(icon("home","user-workspace-home-icon"));
     const bell=add(actions,"details","user-notification-menu");
     const bellButton=add(bell,"summary","user-notification-trigger");bellButton.setAttribute("aria-label","Notifications");bellButton.append(icon("bell","user-notification-icon"));
     const badge=add(bellButton,"span","user-notification-count","0");badge.hidden=true;
@@ -445,6 +465,6 @@
       if (path === "/services/tracker") return await trackerPage(user);
       if (path === "/dashboard"||path.startsWith("/dashboard/")||path==="/profile"||path==="/settings") return await accountPage(user);
       servicesPage();
-    } catch (error) { console.error("Public page failed to load.", { errorType: error.name || "Error", code: error.code }); root.replaceChildren(); const wrap = page("Page unavailable", "We could not load this page right now."); notice(wrap, "Please check your connection and try again shortly.", "is-error"); } }
+    } catch (error) { console.error("Public page failed to load.", { errorType: error.name || "Error", code: error.code }); root.replaceChildren(); const wrap = page(t("errors.pageUnavailable"), t("errors.pageLoadFailed")); notice(wrap, t("errors.connectionRetry"), "is-error"); } }
   start();
 })();

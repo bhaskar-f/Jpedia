@@ -1,4 +1,9 @@
 (() => {
+  const t = (key, values) => window.SetBGetI18n?.t(key, values) ?? key;
+  const formatMoney = (value) =>
+    typeof value === "number" && Number.isFinite(value)
+      ? window.SetBGetI18n?.formatCurrency(value, "INR") ?? String(value)
+      : value;
   const make = (tag, cls, value) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -98,9 +103,9 @@
     if (tocEntries.length) {
       const nav = document.createElement("nav");
       nav.className = "job-document-toc";
-      nav.setAttribute("aria-label", "Table of contents");
+      nav.setAttribute("aria-label", t("jobDetails.tableOfContentsAria"));
       const title = document.createElement("h2");
-      title.textContent = "Table of Contents";
+      title.textContent = t("jobDetails.tableOfContents");
       nav.append(title);
       const list = document.createElement("ul");
       tocEntries.forEach((item) => {
@@ -182,7 +187,7 @@
             "",
             d.label ||
               d.caption ||
-              (block.type === "youtube" ? "Watch on YouTube" : "Open link"),
+              (block.type === "youtube" ? t("jobDetails.watchOnYoutube") : t("jobDetails.openLink")),
           );
           a.href = href;
           a.target = "_blank";
@@ -197,7 +202,7 @@
           node = make("figure", `${classPrefix}-image`);
           const img = make("img");
           img.src = src;
-          img.alt = d.alt || d.caption || "Recruitment information";
+          img.alt = d.alt || d.caption || t("jobDetails.recruitmentInformationAlt");
           img.loading = "lazy";
           node.append(img);
           if (d.caption) node.append(make("figcaption", "", d.caption));
@@ -213,7 +218,7 @@
     root.className = "job-detail-custom-sections";
     const all = [...(Array.isArray(sections) ? sections : [])];
     if (!all.length && Array.isArray(legacyBlocks) && legacyBlocks.length)
-      all.push({ title: "Additional Information", blocks: legacyBlocks });
+      all.push({ title: t("jobDetails.additionalInformation"), blocks: legacyBlocks });
     all.forEach((item) => {
       const blocks = renderBlocks(item.blocks);
       if (!blocks.childNodes.length) return;
@@ -230,17 +235,17 @@
       : [];
     if (!fields.length) return null;
     const section = make("section", "job-detail-section job-detail-variations");
-    section.append(make("h2", "", "Post / Category Variations"));
+    section.append(make("h2", "", t("jobDetails.postCategoryVariations")));
     const list = make("ul", "job-detail-list");
     const labels = {
-      vacancyCount: "Vacancy Count",
-      qualification: "Qualification",
-      ageLimit: "Age Limit",
-      salary: "Salary",
-      applicationFee: "Application Fee",
-      location: "Location",
-      experience: "Experience",
-      selectionProcess: "Selection Process",
+      vacancyCount: t("jobDetails.vacancyCount"),
+      qualification: t("jobDetails.qualification"),
+      ageLimit: t("jobDetails.ageLimit"),
+      salary: t("jobDetails.salary"),
+      applicationFee: t("jobDetails.applicationFee"),
+      location: t("jobDetails.location"),
+      experience: t("jobDetails.experience"),
+      selectionProcess: t("jobDetails.selectionProcess"),
     };
     fields.forEach((field) => {
       (field.entries || []).forEach((entry) => {
@@ -253,7 +258,7 @@
           make(
             "li",
             "",
-            `${labels[field.field] || field.field}${who ? ` · ${who}` : ""}: ${entry.value}`,
+          `${labels[field.field] || field.field}${who ? ` · ${who}` : ""}: ${["salary", "applicationFee"].includes(field.field) ? formatMoney(entry.value) : entry.value}`,
           ),
         );
       });
@@ -264,10 +269,10 @@
         make(
           "p",
           "job-detail-paragraph",
-          "Values vary by post or category. See the post-wise details below.",
+          t("jobDetails.valuesVaryNotice"),
         ),
       );
-    const more = make("a", "job-detail-link", "View Post-wise Details");
+    const more = make("a", "job-detail-link", t("jobDetails.viewPostDetails"));
     more.href = "#job-post-details";
     section.append(more);
     return section;
@@ -279,26 +284,26 @@
       `${classPrefix}-section job-detail-section`,
     );
     section.id = "job-post-details";
-    section.append(make("h2", "", "Post-wise Details"));
+    section.append(make("h2", "", t("jobDetails.postWiseDetails")));
     job.posts.forEach((post) => {
       const card = make("details", "job-post-detail");
       card.open = job.posts.length <= 3;
-      card.append(make("summary", "job-post-summary", post.name || "Post"));
+      card.append(make("summary", "job-post-summary", post.name || t("jobDetails.post")));
       const facts = [];
-      if (post.code) facts.push(`Code: ${post.code}`);
+      if (post.code) facts.push(`${t("jobDetails.codeLabel")}: ${post.code}`);
       if (post.groupName) facts.push(post.groupName);
       if (post.vacancyCount != null)
-        facts.push(`${post.vacancyCount} vacancies`);
+        facts.push(t("jobDetails.vacancyCountForPost", { count: post.vacancyCount }));
       if (post.ageMin != null || post.ageMax != null)
-        facts.push(`Age ${post.ageMin ?? "Any"}–${post.ageMax ?? "Any"}`);
+        facts.push(t("jobDetails.ageRange", { minimum: post.ageMin ?? t("jobDetails.any"), maximum: post.ageMax ?? t("jobDetails.any") }));
       else if (post.ageDescription) facts.push(post.ageDescription);
       if (post.salary) {
-        const value = Object.values(post.salary).filter(Boolean).join(" · ");
+        const value = Object.values(post.salary).filter(Boolean).map(formatMoney).join(" · ");
         if (value) facts.push(value);
       }
       if (facts.length) card.append(make("p", "", facts.join(" · ")));
       if (post.categoryVacancyBreakdown?.length) {
-        card.append(make("h4", "", "Category Vacancies"));
+        card.append(make("h4", "", t("jobDetails.categoryVacancies")));
         const list = make("ul", "");
         post.categoryVacancyBreakdown.forEach((item) =>
           list.append(
@@ -308,7 +313,7 @@
               [
                 item.category,
                 item.vacancyCount != null
-                  ? `${item.vacancyCount} vacancies`
+                  ? t("jobDetails.vacancyCountForPost", { count: item.vacancyCount })
                   : null,
                 item.notes,
               ]
@@ -321,13 +326,13 @@
       }
       for (const [label, items] of [
         [
-          "Qualifications",
+          t("jobDetails.qualifications"),
           (post.qualifications || []).map((x) =>
             [
               x.name,
               x.field,
               x.condition,
-              x.minimumMarks && `Minimum marks ${x.minimumMarks}`,
+              x.minimumMarks && t("jobDetails.minimumMarks", { value: x.minimumMarks }),
               x.additionalRequirement,
             ]
               .filter(Boolean)
@@ -335,16 +340,16 @@
           ),
         ],
         [
-          "Experience",
+          t("jobDetails.experience"),
           (post.experienceRequirements || []).map((x) =>
             [x.minimumExperience, x.domain, x.description]
               .filter(Boolean)
               .join(" · "),
           ),
         ],
-        ["Mandatory certifications", post.mandatoryCertifications || []],
-        ["Preferred certifications", post.preferredCertifications || []],
-        ["Selection requirements", post.selectionRequirements || []],
+        [t("jobDetails.mandatoryCertifications"), post.mandatoryCertifications || []],
+        [t("jobDetails.preferredCertifications"), post.preferredCertifications || []],
+        [t("jobDetails.selectionRequirements"), post.selectionRequirements || []],
       ])
         if (items.length) {
           card.append(make("h4", "", label));
@@ -353,8 +358,8 @@
           card.append(list);
         }
       for (const [label, value] of [
-        ["Additional requirements", post.additionalRequirements],
-        ["Post notes", post.postSpecificNotes],
+        [t("jobDetails.additionalRequirements"), post.additionalRequirements],
+        [t("jobDetails.postNotes"), post.postSpecificNotes],
       ])
         if (value) card.append(make("p", "", `${label}: ${value}`));
       section.append(card);
