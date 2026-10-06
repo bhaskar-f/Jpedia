@@ -34,6 +34,49 @@ const selectionStage = z.object({ name: shortText(160), description: shortText(1
 const salaryInfo = z.object({ payLevel: shortText(120).optional(), payScale: shortText(300).optional(), gradePay: shortText(120).optional(), minimum: shortText(120).optional(), maximum: shortText(120).optional(), description: shortText(1000).optional() }).strict();
 const importantLink = z.object({ label: shortText(120), url, description: shortText(500).optional() }).strict();
 const jobPost = z.object({ _id: id.optional(), name: shortText(200), code: shortText(80).optional(), groupName: shortText(120).optional(), vacancyCount: z.number().int().nonnegative().optional(), categoryVacancyBreakdown: z.array(categoryVacancy).max(50).optional(), ageMin: z.number().min(0).max(120).optional(), ageMax: z.number().min(0).max(120).optional(), ageCutoffDate: z.coerce.date().optional(), ageDescription: shortText(1000).optional(), qualifications: z.array(qualificationRow).max(50).optional(), experienceRequirements: z.array(experienceRow).max(50).optional(), mandatoryCertifications: z.array(shortText(160)).max(50).optional(), preferredCertifications: z.array(shortText(160)).max(50).optional(), minimumMarks: shortText(80).optional(), salary: salaryInfo.optional(), selectionRequirements: z.array(shortText(300)).max(50).optional(), additionalRequirements: shortText(2000).optional(), postSpecificNotes: shortText(2000).optional() }).strict();
+const translatedNotesRow = z.object({ notes: shortText(500).optional() }).strict();
+const translatedQualificationRow = z.object({ additionalRequirement: shortText(1000).optional(), notes: shortText(500).optional() }).strict();
+const translatedExperienceRow = z.object({ description: shortText(1000).optional() }).strict();
+const translatedJobPost = z.object({
+  ageDescription: shortText(1000).optional(),
+  categoryVacancyBreakdown: z.array(translatedNotesRow).max(50).optional(),
+  qualifications: z.array(translatedQualificationRow).max(50).optional(),
+  experienceRequirements: z.array(translatedExperienceRow).max(50).optional(),
+  additionalRequirements: shortText(2000).optional(),
+  postSpecificNotes: shortText(2000).optional(),
+}).strict();
+const translatedJobContent = z.object({
+  description: z.string().max(20000).optional(),
+  qualification: z.string().max(500).optional(),
+  ageRelaxation: z.string().max(500).optional(),
+  ageDescription: shortText(1000).optional(),
+  selectionProcess: z.array(shortText(200)).max(30).optional(),
+  importantDates: z.array(z.object({ description: shortText(500).optional() }).strict()).max(100).optional(),
+  vacancyBreakdown: z.array(translatedNotesRow).max(100).optional(),
+  ageRelaxations: z.array(translatedNotesRow).max(50).optional(),
+  applicationFees: z.array(translatedNotesRow).max(50).optional(),
+  qualifications: z.array(translatedQualificationRow).max(50).optional(),
+  experienceRequirements: z.array(translatedExperienceRow).max(50).optional(),
+  selectionStages: z.array(z.object({ description: shortText(1000).optional() }).strict()).max(50).optional(),
+  salaryInfo: z.object({ description: shortText(1000).optional() }).strict().optional(),
+  howToApplySteps: z.array(shortText(1000)).max(100).optional(),
+  importantLinks: z.array(z.object({ description: shortText(500).optional() }).strict()).max(100).optional(),
+  documentsRequired: z.array(z.object({ description: shortText(1000).optional() }).strict()).max(100).optional(),
+  importantInstructions: z.array(z.object({ text: shortText(2000).optional() }).strict()).max(100).optional(),
+  posts: z.array(translatedJobPost).max(100).optional(),
+  postGroups: z.array(z.object({ description: shortText(500).optional() }).strict()).max(50).optional(),
+}).strict().superRefine((translation, ctx) => {
+  const hasText = value => {
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (Array.isArray(value)) return value.some(hasText);
+    if (value && typeof value === 'object') return Object.values(value).some(hasText);
+    return false;
+  };
+  if (!hasText(translation)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'A translation must contain at least one eligible text field.' });
+});
+const contentTranslationsSchema = z.object({ hi: translatedJobContent.optional(), bn: translatedJobContent.optional() }).strict().superRefine((translations, ctx) => {
+  if (!translations.hi && !translations.bn) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Provide a Hindi or Bengali translation.' });
+});
 const blockData = {
   paragraph: z.object({ text: z.string().trim().min(1).max(10000) }).strict(), heading: z.object({ text: z.string().trim().min(1).max(300) }).strict(),
   callout: z.object({ text: z.string().trim().min(1).max(3000), tone: z.enum(['NOTE','WARNING','INFO']).optional() }).strict(),
@@ -68,6 +111,7 @@ const documentNodes = z.array(documentNode).max(2000).superRefine((nodes,ctx)=>{
   inspect(nodes);if(size>500000)ctx.addIssue({code:z.ZodIssueCode.custom,message:'Document text exceeds 500,000 characters.'});if(count>10000)ctx.addIssue({code:z.ZodIssueCode.custom,message:'Document contains too many nested nodes.'});
 });
 const job = jobBase.extend({
+  contentTranslations: contentTranslationsSchema.optional(),
   contentDocument: documentNodes.optional(),
   importantDates: z.array(dateRow).max(100).optional(), vacancyBreakdown: z.array(vacancyRow).max(100).optional(),
   ageCutoffDate: z.coerce.date().optional(), ageDescription: shortText(1000).optional(), ageRelaxations: z.array(ageRelaxation).max(50).optional(),

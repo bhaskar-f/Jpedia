@@ -56,12 +56,20 @@ function makeSlug(title) {
   const value = String(title || '').trim();
   return value ? `${slugify(value)}-${Date.now().toString(36)}` : `draft-${new mongoose.Types.ObjectId().toString()}`;
 }
+function mergeContentTranslations(current, updates) {
+  const currentValues = typeof current?.toObject === 'function' ? current.toObject() : current || {};
+  const merged = { ...currentValues };
+  for (const [locale, values] of Object.entries(updates || {})) {
+    merged[locale] = { ...(currentValues[locale] || {}), ...values };
+  }
+  return merged;
+}
 async function create(input, user) {
   const postIds = new Set((input.posts || []).map(post => String(post._id || '')).filter(Boolean));
   for (const field of input.conditionalFields || []) for (const entry of field.entries || []) if (entry.postId && !postIds.has(String(entry.postId))) throw new AppError(400, 'INVALID_CONDITIONAL_POST', 'Conditional values must reference a post included in this recruitment.');
   if (input.howToApplyYoutubeUrl && !isYoutubeUrl(input.howToApplyYoutubeUrl)) throw new AppError(400, 'INVALID_YOUTUBE_URL', 'Use a YouTube URL for how-to-apply videos.');
   const board = input.board ? await Board.findById(input.board) : null; if (input.board && !board) throw new AppError(400, 'INVALID_BOARD', 'Board does not exist.');
-  const created=await Job.create({ ...input, board: board?._id, boardName: board?.name, slug: makeSlug(input.title), author: user._id, status: 'DRAFT', verificationStatus: 'UNVERIFIED' });
+  const created=await Job.create({ ...input, contentTranslations: input.contentTranslations, board: board?._id, boardName: board?.name, slug: makeSlug(input.title), author: user._id, status: 'DRAFT', verificationStatus: 'UNVERIFIED' });
   AuditLog.create({actor:user._id,actorRole:user.role,action:'job.created',targetType:'Job',targetId:String(created._id),summary:`Created draft ${created.title || 'Untitled Draft'}`}).catch(()=>{});return created;
 }
 async function update(jobId, input, user) {
@@ -80,7 +88,10 @@ async function update(jobId, input, user) {
   const hasBoard = Object.prototype.hasOwnProperty.call(input, 'board');
   const board = hasBoard && input.board ? await Board.findById(input.board) : null;
   if (hasBoard && input.board && !board) throw new AppError(400, 'INVALID_BOARD', 'Board does not exist.');
+  const existingContentTranslations = job.contentTranslations;
   Object.assign(job, input);
+  if (Object.prototype.hasOwnProperty.call(input, 'contentTranslations'))
+    job.contentTranslations = mergeContentTranslations(existingContentTranslations, input.contentTranslations);
   if (hasBoard) { job.board = board?._id; job.boardName = board?.name; }
   if (input.title) job.slug = makeSlug(input.title); await job.save(); return job;
 }
@@ -110,4 +121,4 @@ async function review(jobId, reviewer, action, reason) {
   AuditLog.create({actor:reviewer._id,actorRole:reviewer.role,action:`job.${action}`,targetType:'Job',targetId:String(job._id),summary:`${verb} ${job.title}${action==='reject'?`: ${job.rejectionReason}`:''}`.slice(0,500)}).catch(()=>{});return job;
 }
 async function fetchExpired() { return Job.updateMany({ status: 'PUBLISHED', applicationDeadline: { $lt: new Date() } }, { $set: { status: 'EXPIRED' } }); }
-module.exports = { list, related, rankRelated, create, update, submitReview, review, fetchExpired, makeSlug };
+module.exports = { list, related, rankRelated, create, update, submitReview, review, fetchExpired, makeSlug, mergeContentTranslations };

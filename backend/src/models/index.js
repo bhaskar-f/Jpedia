@@ -20,6 +20,49 @@ const contentBlock = new Schema({ type: { type: String, enum: ['paragraph','head
 const contentSection = new Schema({ title: { type: String, maxlength: 160 }, blocks: [contentBlock] }, { _id: false });
 const conditionalEntry = new Schema({ postId: { type: Schema.Types.ObjectId }, category: String, value: String }, { _id: false });
 const conditionalField = new Schema({ field: { type: String, enum: ['vacancyCount','qualification','ageLimit','salary','applicationFee','location','experience','selectionProcess'] }, mode: { type: String, enum: ['COMMON','VARIES'] }, entries: [conditionalEntry] }, { _id: false });
+const translatedDateEntry = new Schema({ description: String }, { _id: false });
+const translatedNotesEntry = new Schema({ notes: String }, { _id: false });
+const translatedQualificationEntry = new Schema({ additionalRequirement: String, notes: String }, { _id: false });
+const translatedExperienceEntry = new Schema({ description: String }, { _id: false });
+const translatedSelectionStage = new Schema({ description: String }, { _id: false });
+const translatedSalaryInfo = new Schema({ description: String }, { _id: false });
+const translatedImportantLink = new Schema({ description: String }, { _id: false });
+const translatedDocument = new Schema({ description: String }, { _id: false });
+const translatedInstruction = new Schema({ text: String }, { _id: false });
+const translatedRecruitmentPost = new Schema({
+  ageDescription: String,
+  categoryVacancyBreakdown: { type: [translatedNotesEntry], default: undefined },
+  qualifications: { type: [translatedQualificationEntry], default: undefined },
+  experienceRequirements: { type: [translatedExperienceEntry], default: undefined },
+  additionalRequirements: String,
+  postSpecificNotes: String,
+}, { _id: false });
+const translatedPostGroup = new Schema({ description: String }, { _id: false });
+const translatedJobContent = new Schema({
+  description: String,
+  qualification: String,
+  ageRelaxation: String,
+  ageDescription: String,
+  selectionProcess: { type: [String], default: undefined },
+  importantDates: { type: [translatedDateEntry], default: undefined },
+  vacancyBreakdown: { type: [translatedNotesEntry], default: undefined },
+  ageRelaxations: { type: [translatedNotesEntry], default: undefined },
+  applicationFees: { type: [translatedNotesEntry], default: undefined },
+  qualifications: { type: [translatedQualificationEntry], default: undefined },
+  experienceRequirements: { type: [translatedExperienceEntry], default: undefined },
+  selectionStages: { type: [translatedSelectionStage], default: undefined },
+  salaryInfo: translatedSalaryInfo,
+  howToApplySteps: { type: [String], default: undefined },
+  importantLinks: { type: [translatedImportantLink], default: undefined },
+  documentsRequired: { type: [translatedDocument], default: undefined },
+  importantInstructions: { type: [translatedInstruction], default: undefined },
+  posts: { type: [translatedRecruitmentPost], default: undefined },
+  postGroups: { type: [translatedPostGroup], default: undefined },
+}, { _id: false, strict: 'throw' });
+const contentTranslations = new Schema({
+  hi: { type: translatedJobContent },
+  bn: { type: translatedJobContent },
+}, { _id: false, strict: 'throw' });
 const recruitmentPost = new Schema({
   name: String, code: String, groupName: String, vacancyCount: Number,
   categoryVacancyBreakdown: [categoryVacancy], ageMin: Number, ageMax: Number, ageCutoffDate: Date, ageDescription: String,
@@ -52,6 +95,7 @@ const Job = mongoose.model('Job', schema({
   selectionStages: [selectionStage], salaryInfo, howToApplySteps: [String], importantLinks: [importantLink],
   contentDocument: [Schema.Types.Mixed], contentBlocks: [contentBlock], contentSections: [contentSection], conditionalFields: [conditionalField], documentsRequired: [{ name: String, description: String, required: Boolean }],
   importantInstructions: [{ text: String, category: String }], posts: [recruitmentPost], postGroups: [postGroup],
+  contentTranslations: { type: contentTranslations, default: undefined },
   source: ref('RecruitmentSource', false), sourceUrl: String, sourceExternalId: String, status: { type: String, enum: JOB_STATUSES, default: 'DRAFT' }, verificationStatus: { type: String, enum: ['UNVERIFIED','PENDING','VERIFIED','REJECTED'], default: 'UNVERIFIED' },
   author: ref('User', false), reviewedBy: ref('User', false), reviewedAt: Date, publishedBy: ref('User', false), publishedAt: Date, rejectionReason: String, rawSourceReference: String
 }));

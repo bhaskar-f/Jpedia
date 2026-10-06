@@ -2662,6 +2662,47 @@ body.board-details-shell #boardDetailRoot {
   line-height: 1.25;
   font-weight: 700;
 }
+.job-detail-content-language {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 10px;
+  margin: 0 0 10px;
+  white-space: normal;
+}
+.job-detail-content-language-label {
+  color: #555;
+  font-size: 12px;
+  font-weight: 600;
+}
+.job-detail-content-language-select {
+  min-height: 34px;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #888;
+  border-radius: 0;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 12px;
+}
+.job-detail-translation-unavailable {
+  flex-basis: 100%;
+  margin: 0;
+  color: #555;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.job-detail-translation-unavailable[hidden] {
+  display: none !important;
+}
+.job-detail-translated-content {
+  min-width: 0;
+}
+.job-detail-field dd .job-detail-translated-content > span {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .job-detail-section .job-detail-field {
   display: grid;
   grid-template-columns: minmax(130px, 200px) minmax(0, 1fr);
@@ -2967,6 +3008,37 @@ body.board-details-shell #boardDetailRoot {
 .admin-repeater-rows {
   gap: 12px;
 }
+.admin-job-translations > p {
+  margin: 0 0 12px;
+}
+.admin-translation-language,
+.admin-repeat-translation-language {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+.admin-translation-language h3,
+.admin-repeat-translation-language h4 {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+}
+.admin-repeat-translations {
+  grid-column: 1 / -1;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+.admin-repeat-translations > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.admin-repeat-translation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 10px;
+}
 .admin-repeat-row {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
   min-width: 0;
@@ -3111,6 +3183,11 @@ body.board-details-shell #boardDetailRoot {
   .admin-repeat-row,
   .admin-repeat-row:has(.admin-post-card) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-translation-language,
+  .admin-repeat-translation-language,
+  .admin-repeat-translation-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .admin-repeat-row > button {
     grid-column: auto;

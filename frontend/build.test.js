@@ -22,6 +22,7 @@ test('Vercel builds require an explicit public API URL and embed only that URL',
   assert.ok(config.includes('https://api-preview.example/api'));
   assert.doesNotMatch(config, /SECRET|MONGODB|PASSWORD|JWT_/);
   assert.ok(fs.existsSync(path.join(root, 'public', 'i18n.js')));
+  assert.ok(fs.existsSync(path.join(root, 'public', 'job-content-language.js')));
   for (const locale of ['en', 'hi', 'bn'])
     assert.ok(fs.existsSync(path.join(root, 'public', 'locales', `${locale}.json`)));
 });

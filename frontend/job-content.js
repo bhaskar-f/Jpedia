@@ -277,7 +277,7 @@
     section.append(more);
     return section;
   }
-  function renderPosts(job, classPrefix = "job-detail") {
+  function renderPosts(job, classPrefix = "job-detail", contentLocale = "en") {
     if (!Array.isArray(job?.posts) || !job.posts.length) return null;
     const section = make(
       "section",
@@ -285,7 +285,12 @@
     );
     section.id = "job-post-details";
     section.append(make("h2", "", t("jobDetails.postWiseDetails")));
-    job.posts.forEach((post) => {
+    job.posts.forEach((post, postIndex) => {
+      const translatedPost = ["hi", "bn"].includes(contentLocale)
+        ? job.contentTranslations?.[contentLocale]?.posts?.[postIndex] || {}
+        : {};
+      const translated = (candidate, source) =>
+        typeof candidate === "string" && candidate.trim() ? candidate : source;
       const card = make("details", "job-post-detail");
       card.open = job.posts.length <= 3;
       card.append(make("summary", "job-post-summary", post.name || t("jobDetails.post")));
@@ -296,7 +301,7 @@
         facts.push(t("jobDetails.vacancyCountForPost", { count: post.vacancyCount }));
       if (post.ageMin != null || post.ageMax != null)
         facts.push(t("jobDetails.ageRange", { minimum: post.ageMin ?? t("jobDetails.any"), maximum: post.ageMax ?? t("jobDetails.any") }));
-      else if (post.ageDescription) facts.push(post.ageDescription);
+      else if (post.ageDescription) facts.push(translated(translatedPost.ageDescription, post.ageDescription));
       if (post.salary) {
         const value = Object.values(post.salary).filter(Boolean).map(formatMoney).join(" · ");
         if (value) facts.push(value);
@@ -305,7 +310,7 @@
       if (post.categoryVacancyBreakdown?.length) {
         card.append(make("h4", "", t("jobDetails.categoryVacancies")));
         const list = make("ul", "");
-        post.categoryVacancyBreakdown.forEach((item) =>
+        post.categoryVacancyBreakdown.forEach((item, rowIndex) =>
           list.append(
             make(
               "li",
@@ -315,7 +320,7 @@
                 item.vacancyCount != null
                   ? t("jobDetails.vacancyCountForPost", { count: item.vacancyCount })
                   : null,
-                item.notes,
+                translated(translatedPost.categoryVacancyBreakdown?.[rowIndex]?.notes, item.notes),
               ]
                 .filter(Boolean)
                 .join(" · "),
@@ -327,13 +332,13 @@
       for (const [label, items] of [
         [
           t("jobDetails.qualifications"),
-          (post.qualifications || []).map((x) =>
+          (post.qualifications || []).map((x, rowIndex) =>
             [
               x.name,
               x.field,
               x.condition,
               x.minimumMarks && t("jobDetails.minimumMarks", { value: x.minimumMarks }),
-              x.additionalRequirement,
+              translated(translatedPost.qualifications?.[rowIndex]?.additionalRequirement, x.additionalRequirement),
             ]
               .filter(Boolean)
               .join(" · "),
@@ -341,8 +346,8 @@
         ],
         [
           t("jobDetails.experience"),
-          (post.experienceRequirements || []).map((x) =>
-            [x.minimumExperience, x.domain, x.description]
+          (post.experienceRequirements || []).map((x, rowIndex) =>
+            [x.minimumExperience, x.domain, translated(translatedPost.experienceRequirements?.[rowIndex]?.description, x.description)]
               .filter(Boolean)
               .join(" · "),
           ),
@@ -358,8 +363,8 @@
           card.append(list);
         }
       for (const [label, value] of [
-        [t("jobDetails.additionalRequirements"), post.additionalRequirements],
-        [t("jobDetails.postNotes"), post.postSpecificNotes],
+        [t("jobDetails.additionalRequirements"), translated(translatedPost.additionalRequirements, post.additionalRequirements)],
+        [t("jobDetails.postNotes"), translated(translatedPost.postSpecificNotes, post.postSpecificNotes)],
       ])
         if (value) card.append(make("p", "", `${label}: ${value}`));
       section.append(card);

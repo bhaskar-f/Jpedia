@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Stored Job Translation Preview | SetBGet</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="icon" href="/assets/favicons/favicon.ico" type="image/x-icon" />
+    <script src="/dev-fixtures/content-translated-job.fixture.js"></script>
+    <script src="/translation-preview.js"></script>
+    <script src="/i18n.js" defer></script>
+    <script src="/job-content.js" defer></script>
+    <script src="/job-content-language.js" defer></script>
+    <script src="/youtube-video.js" defer></script>
+    <script src="/job-details.js" defer></script>
+  </head>
+  <body>
+    <aside role="note" style="padding:.75rem 1rem;border-bottom:1px solid #c7d8ed;background:#eef5ff;color:#17375e;font:500 .9rem/1.5 var(--font-body);text-align:center">
+      Development preview: this page uses an in-memory test fixture. No database or live API is used.
+      Set the UI language to हिन्दी and inspect the Bengali-only salary explanation, then set it to বাংলা and inspect the Hindi-only age-relaxation explanation. Use each section’s content-language menu to compare Original, हिन्दी, and বাংলা where available.
+    </aside>
+    <p id="translationPreviewError" role="alert" hidden style="padding:1rem;background:#fff0f0;color:#8b1d1d"></p>
+    <header class="site-header">
+      <a class="brand-mark" href="/translation-preview.html" aria-label="SetBGet home">
+        <img src="/logo.png" alt="SetBGet" />
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/translation-preview.html" data-i18n="navigation.home">Home</a>
+        <a href="/translation-preview.html" data-i18n="navigation.jobs">Jobs</a>
+        <a href="/translation-preview.html" data-i18n="navigation.communities">Communities</a>
+      </nav>
+      <label class="locale-selector-label" for="localeSelector">
+        <select id="localeSelector" class="locale-selector" aria-label="Language" data-i18n-aria-label="accessibility.languageSelector">
+          <option value="en">English</option>
+          <option value="hi">हिन्दी</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </label>
+      <button class="outline-btn login-btn" id="loginBtn" type="button">
+        <span data-i18n="navigation.signIn">Sign in</span>
+      </button>
+    </header>
+    <main id="jobDetailRoot" hidden></main>
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Main navigation"></nav>
+    <script src="/translation-preview-restore.js" defer></script>
+  </body>
+</html>

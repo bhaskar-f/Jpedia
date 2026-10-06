@@ -4,6 +4,7 @@
   const root = document.querySelector("#jobDetailRoot");
   if (!root) return;
   const i18n = window.SetBGetI18n;
+  const contentLanguage = window.SetBGetJobContentLanguage;
   const t = (key, values) => i18n?.t(key, values) ?? key;
   const formatNumber = (value) => i18n?.formatNumber(value) ?? String(value);
   const formatMoney = (value) =>
@@ -45,6 +46,54 @@
     if (text !== undefined) item.textContent = text;
     return item;
   };
+  let contentLanguageControlId = 0;
+  function contentSwitcher(parent, translations, render) {
+    const available = contentLanguage?.available(translations) || [];
+    if (!available.length) {
+      render(parent, null, "en");
+      return;
+    }
+    const desiredLocale = i18n?.locale || "en";
+    const initialLocale = contentLanguage?.initialLocale(desiredLocale, translations) || "en";
+    const control = el("div", "job-detail-content-language");
+    const label = el("label", "job-detail-content-language-label", t("jobDetails.contentLanguage"));
+    label.dataset.i18n = "jobDetails.contentLanguage";
+    const select = el("select", "job-detail-content-language-select");
+    const selectId = `job-content-language-${++contentLanguageControlId}`;
+    select.id = selectId;
+    select.setAttribute("aria-label", t("jobDetails.contentLanguage"));
+    select.dataset.i18nAriaLabel = "jobDetails.contentLanguage";
+    select.append(new Option(t("jobDetails.contentLanguageOriginal"), "en"));
+    if (available.includes("hi")) select.append(new Option(t("jobDetails.contentLanguageHindi"), "hi"));
+    if (available.includes("bn")) select.append(new Option(t("jobDetails.contentLanguageBengali"), "bn"));
+    select.value = initialLocale;
+    label.htmlFor = selectId;
+    control.append(label, select);
+    const unavailable = el("p", "job-detail-translation-unavailable");
+    unavailable.setAttribute("aria-live", "polite");
+    let showInitialUnavailable = ["hi", "bn"].includes(desiredLocale) && !available.includes(desiredLocale);
+    const setUnavailableMessage = () => {
+      const language = desiredLocale === "hi"
+        ? t("jobDetails.contentLanguageHindi")
+        : t("jobDetails.contentLanguageBengali");
+      unavailable.textContent = t("jobDetails.contentTranslationUnavailable", { language });
+      unavailable.hidden = !(showInitialUnavailable && select.value === "en");
+    };
+    control.append(unavailable);
+    const body = el("div", "job-detail-translated-content");
+    parent.append(control, body);
+    const update = () => {
+      const selected = select.value;
+      body.replaceChildren();
+      render(body, selected === "en" ? null : translations[selected], selected);
+      setUnavailableMessage();
+    };
+    select.addEventListener("change", () => {
+      showInitialUnavailable = false;
+      update();
+    });
+    update();
+  }
   const api = async (path, options = {}) => {
     const response = await fetch(`${API_BASE}${path}`, {
       credentials: "include",
@@ -129,162 +178,253 @@
     parent.append(item);
     return item;
   }
-  function dataTable(parent, title, headers, rows) {
+  function dataTable(parent, title, headers, rows, translations = null, localizeRows = value => value) {
     if (!rows.length) return;
     const group = section(parent, title);
-    const table = el("table", "job-detail-data-table");
-    const thead = el("thead"),
-      headerRow = el("tr");
-    headers.forEach((header) => headerRow.append(el("th", "", header)));
-    thead.append(headerRow);
-    table.append(thead);
-    const body = el("tbody");
-    rows.forEach((values) => {
-      const row = el("tr");
-      values.forEach((value) => row.append(el("td", "", text(value))));
-      body.append(row);
+    contentSwitcher(group, translations, (target, translation) => {
+      const table = el("table", "job-detail-data-table");
+      const thead = el("thead"),
+        headerRow = el("tr");
+      headers.forEach((header) => headerRow.append(el("th", "", header)));
+      thead.append(headerRow);
+      table.append(thead);
+      const body = el("tbody");
+      localizeRows(rows, translation).forEach((values) => {
+        const row = el("tr");
+        values.forEach((value) => row.append(el("td", "", text(value))));
+        body.append(row);
+      });
+      table.append(body);
+      const wrap = el("div", "job-detail-table-wrap");
+      wrap.append(table);
+      target.append(wrap);
     });
-    table.append(body);
-    const wrap = el("div", "job-detail-table-wrap");
-    wrap.append(table);
-    group.append(wrap);
     return group;
   }
+  function arrayTextTranslations(job, path, field, sourceItems) {
+    const result = {};
+    for (const locale of ["hi", "bn"]) {
+      const values = (sourceItems || []).map((item, index) => {
+        const source = typeof item === "string" ? item : item?.[field];
+        const candidate = typeof item === "string"
+          ? job.contentTranslations?.[locale]?.[path]?.[index]
+          : job.contentTranslations?.[locale]?.[path]?.[index]?.[field];
+        return exists(source) && contentLanguage?.hasText(candidate) ? candidate : "";
+      });
+      if (contentLanguage?.hasText(values)) result[locale] = values;
+    }
+    return result;
+  }
+  function localizedValue(translation, source) {
+    return contentLanguage?.value(translation, source) ?? source;
+  }
+  function localizedParagraph(parent, source, translations) {
+    contentSwitcher(parent, translations, (target, translation) => {
+      target.append(el("p", "job-detail-paragraph", localizedValue(translation, source)));
+    });
+  }
+  function renderedPostTranslations(job) {
+    const result = {};
+    for (const locale of ["hi", "bn"]) {
+      const values = (job.posts || []).map((post, index) => {
+        const translated = job.contentTranslations?.[locale]?.posts?.[index] || {};
+        const visible = {};
+        if (post.ageMin == null && post.ageMax == null && exists(post.ageDescription) && contentLanguage?.hasText(translated.ageDescription))
+          visible.ageDescription = translated.ageDescription;
+        if (post.categoryVacancyBreakdown?.length)
+          visible.categoryVacancyBreakdown = post.categoryVacancyBreakdown.map((row, rowIndex) =>
+            exists(row.notes) && contentLanguage?.hasText(translated.categoryVacancyBreakdown?.[rowIndex]?.notes)
+              ? { notes: translated.categoryVacancyBreakdown[rowIndex].notes }
+              : {},
+          );
+        if (post.qualifications?.length)
+          visible.qualifications = post.qualifications.map((row, rowIndex) =>
+            exists(row.additionalRequirement) && contentLanguage?.hasText(translated.qualifications?.[rowIndex]?.additionalRequirement)
+              ? { additionalRequirement: translated.qualifications[rowIndex].additionalRequirement }
+              : {},
+          );
+        if (post.experienceRequirements?.length)
+          visible.experienceRequirements = post.experienceRequirements.map((row, rowIndex) =>
+            exists(row.description) && contentLanguage?.hasText(translated.experienceRequirements?.[rowIndex]?.description)
+              ? { description: translated.experienceRequirements[rowIndex].description }
+              : {},
+          );
+        if (exists(post.additionalRequirements) && contentLanguage?.hasText(translated.additionalRequirements))
+          visible.additionalRequirements = translated.additionalRequirements;
+        if (exists(post.postSpecificNotes) && contentLanguage?.hasText(translated.postSpecificNotes))
+          visible.postSpecificNotes = translated.postSpecificNotes;
+        return visible;
+      });
+      if (contentLanguage?.hasText(values)) result[locale] = values;
+    }
+    return result;
+  }
   function renderAuthoringData(parent, job) {
+    const dates = job.importantDates || [];
     dataTable(
       parent,
       t("jobDetails.importantDates"),
       [t("jobDetails.event"), t("jobDetails.date"), t("jobDetails.description")],
-      (job.importantDates || []).map((x) => [
+      dates.map((x) => [
         x.event,
         date(x.date),
         x.description,
       ]),
+      arrayTextTranslations(job, "importantDates", "description", dates),
+      (rows, translation) => rows.map((row, index) => [row[0], row[1], localizedValue(translation?.[index], row[2])]),
     );
+    const vacancies = job.vacancyBreakdown || [];
     dataTable(
       parent,
       t("jobDetails.vacancyBreakdown"),
       [t("jobDetails.post"), t("jobDetails.vacancies"), t("jobDetails.notesLabel")],
-      (job.vacancyBreakdown || []).map((x) => [
+      vacancies.map((x) => [
         x.post,
         x.vacancyCount,
         x.notes,
       ]),
+      arrayTextTranslations(job, "vacancyBreakdown", "notes", vacancies),
+      (rows, translation) => rows.map((row, index) => [row[0], row[1], localizedValue(translation?.[index], row[2])]),
     );
+    const relaxations = job.ageRelaxations || [];
     dataTable(
       parent,
       t("jobDetails.ageRelaxations"),
       [t("jobDetails.category"), t("jobDetails.relaxation"), t("jobDetails.notesLabel")],
-      (job.ageRelaxations || []).map((x) => [
+      relaxations.map((x) => [
         x.category,
         x.relaxation,
         x.notes,
       ]),
+      arrayTextTranslations(job, "ageRelaxations", "notes", relaxations),
+      (rows, translation) => rows.map((row, index) => [row[0], row[1], localizedValue(translation?.[index], row[2])]),
     );
+    const fees = job.applicationFees || [];
     dataTable(
       parent,
       t("jobDetails.applicationFees"),
       [t("jobDetails.category"), t("jobDetails.fee"), t("jobDetails.notesLabel")],
-      (job.applicationFees || []).map((x) => [x.category, x.fee, x.notes]),
+      fees.map((x) => [x.category, x.fee, x.notes]),
+      arrayTextTranslations(job, "applicationFees", "notes", fees),
+      (rows, translation) => rows.map((row, index) => [row[0], row[1], localizedValue(translation?.[index], row[2])]),
     );
+    const qualifications = job.qualifications || [];
     dataTable(
       parent,
       t("jobDetails.qualifications"),
       [t("jobDetails.requirement"), t("jobDetails.field"), t("jobDetails.condition"), t("jobDetails.additionalRequirement")],
-      (job.qualifications || []).map((x) => [
+      qualifications.map((x) => [
         x.name,
         x.field,
         x.condition,
         x.additionalRequirement,
       ]),
+      arrayTextTranslations(job, "qualifications", "additionalRequirement", qualifications),
+      (rows, translation) => rows.map((row, index) => [row[0], row[1], row[2], localizedValue(translation?.[index], row[3])]),
     );
     if (job.selectionStages?.length) {
       const group = section(parent, t("jobDetails.selectionProcess"));
-      const list = el("ol", "job-detail-list");
-      job.selectionStages.forEach((stage) => {
-        const item = el("li");
-        item.append(el("strong", "", stage.name));
-        if (stage.description) item.append(el("p", "", stage.description));
-        const details = [
-          stage.maximumMarks != null
-            ? t("jobDetails.maximumMarks", { value: stage.maximumMarks })
-            : "",
-          stage.qualifyingMarks != null
-            ? t("jobDetails.qualifyingMarks", { value: stage.qualifyingMarks })
-            : "",
-          stage.qualifyingPercentage != null
-            ? t("jobDetails.qualifyingPercentage", { value: stage.qualifyingPercentage })
-            : "",
-          stage.duration,
-          stage.weightage ? t("jobDetails.weightage", { value: stage.weightage }) : "",
-        ].filter(Boolean);
-        if (details.length) item.append(el("p", "", details.join(" · ")));
-        if (stage.components?.length) {
-          const comps = el("ul");
-          stage.components.forEach((c) =>
-            comps.append(
-              el(
-                "li",
-                "",
-                `${c.name}${c.maximumMarks != null ? ` · ${t("jobDetails.marks", { value: c.maximumMarks })}` : ""}${c.qualifyingOnly ? ` · ${t("jobDetails.qualifyingOnly")}` : ""}`,
+      contentSwitcher(group, arrayTextTranslations(job, "selectionStages", "description", job.selectionStages), (target, translation) => {
+        const list = el("ol", "job-detail-list");
+        job.selectionStages.forEach((stage, index) => {
+          const item = el("li");
+          item.append(el("strong", "", stage.name));
+          const description = localizedValue(translation?.[index], stage.description);
+          if (description) item.append(el("p", "", description));
+          const details = [
+            stage.maximumMarks != null
+              ? t("jobDetails.maximumMarks", { value: stage.maximumMarks })
+              : "",
+            stage.qualifyingMarks != null
+              ? t("jobDetails.qualifyingMarks", { value: stage.qualifyingMarks })
+              : "",
+            stage.qualifyingPercentage != null
+              ? t("jobDetails.qualifyingPercentage", { value: stage.qualifyingPercentage })
+              : "",
+            stage.duration,
+            stage.weightage ? t("jobDetails.weightage", { value: stage.weightage }) : "",
+          ].filter(Boolean);
+          if (details.length) item.append(el("p", "", details.join(" · ")));
+          if (stage.components?.length) {
+            const comps = el("ul");
+            stage.components.forEach((c) =>
+              comps.append(
+                el(
+                  "li",
+                  "",
+                  `${c.name}${c.maximumMarks != null ? ` · ${t("jobDetails.marks", { value: c.maximumMarks })}` : ""}${c.qualifyingOnly ? ` · ${t("jobDetails.qualifyingOnly")}` : ""}`,
+                ),
               ),
-            ),
-          );
-          item.append(comps);
-        }
-        list.append(item);
+            );
+            item.append(comps);
+          }
+          list.append(item);
+        });
+        target.append(list);
       });
-      group.append(list);
     }
     if (job.salaryInfo && Object.values(job.salaryInfo).some(exists)) {
       const group = section(parent, t("jobDetails.payAndSalary"));
-      const dl = el("dl", "job-detail-fields");
-      for (const [label, key] of [
-        [t("jobDetails.payLevel"), "payLevel"],
-        [t("jobDetails.payScale"), "payScale"],
-        [t("jobDetails.gradePay"), "gradePay"],
-        [t("jobDetails.minimum"), "minimum"],
-        [t("jobDetails.maximum"), "maximum"],
-        [t("jobDetails.description"), "description"],
-      ])
-        field(dl, label, job.salaryInfo[key]);
-      group.append(dl);
+      const salaryTranslations = {};
+      for (const locale of ["hi", "bn"]) {
+        const value = job.contentTranslations?.[locale]?.salaryInfo?.description;
+        if (exists(job.salaryInfo.description) && contentLanguage?.hasText(value))
+          salaryTranslations[locale] = { description: value };
+      }
+      contentSwitcher(group, salaryTranslations, (target, translation) => {
+        const dl = el("dl", "job-detail-fields");
+        for (const [label, key] of [
+          [t("jobDetails.payLevel"), "payLevel"],
+          [t("jobDetails.payScale"), "payScale"],
+          [t("jobDetails.gradePay"), "gradePay"],
+          [t("jobDetails.minimum"), "minimum"],
+          [t("jobDetails.maximum"), "maximum"],
+          [t("jobDetails.description"), "description"],
+        ])
+          field(dl, label, key === "description"
+            ? localizedValue(translation?.description, job.salaryInfo[key])
+            : job.salaryInfo[key]);
+        target.append(dl);
+      });
     }
     if (job.importantLinks?.length) {
       const group = section(parent, t("jobDetails.importantLinks"));
-      const list = el("ul", "job-detail-list");
-      job.importantLinks.forEach((item) => {
-        const li = el("li");
-        const a = link(item.label || t("jobDetails.officialLink"), item.url);
-        if (a) li.append(a);
-        if (item.description)
-          li.append(el("span", "", ` · ${item.description}`));
-        if (li.childNodes.length) list.append(li);
+      const links = job.importantLinks;
+      contentSwitcher(group, arrayTextTranslations(job, "importantLinks", "description", links), (target, translation) => {
+        const list = el("ul", "job-detail-list");
+        links.forEach((item, index) => {
+          const li = el("li");
+          const a = link(item.label || t("jobDetails.officialLink"), item.url);
+          if (a) li.append(a);
+          const description = localizedValue(translation?.[index], item.description);
+          if (description)
+            li.append(el("span", "", ` · ${description}`));
+          if (li.childNodes.length) list.append(li);
+        });
+        if (list.children.length) target.append(list);
+        else group.remove();
       });
-      if (list.children.length) group.append(list);
-      else group.remove();
     }
     if (job.documentsRequired?.length) {
       const group = section(parent, t("jobDetails.documentsRequired"));
-      const list = el("ul", "job-detail-list");
-      job.documentsRequired.forEach((x) =>
-        list.append(
-          el(
-            "li",
-            "",
-            `${x.name}${x.required === false ? ` (${t("jobDetails.optional")})` : ""}${x.description ? ` — ${x.description}` : ""}`,
-          ),
-        ),
-      );
-      group.append(list);
+      const documents = job.documentsRequired;
+      contentSwitcher(group, arrayTextTranslations(job, "documentsRequired", "description", documents), (target, translation) => {
+        const list = el("ul", "job-detail-list");
+        documents.forEach((x, index) => {
+          const description = localizedValue(translation?.[index], x.description);
+          list.append(el("li", "", `${x.name}${x.required === false ? ` (${t("jobDetails.optional")})` : ""}${description ? ` — ${description}` : ""}`));
+        });
+        target.append(list);
+      });
     }
     if (job.importantInstructions?.length) {
       const group = section(parent, t("jobDetails.importantInstructions"));
-      const list = el("ul", "job-detail-list");
-      job.importantInstructions.forEach((x) =>
-        list.append(el("li", "", x.text)),
-      );
-      group.append(list);
+      const instructions = job.importantInstructions;
+      contentSwitcher(group, arrayTextTranslations(job, "importantInstructions", "text", instructions), (target, translation) => {
+        const list = el("ul", "job-detail-list");
+        instructions.forEach((x, index) => list.append(el("li", "", localizedValue(translation?.[index], x.text))));
+        target.append(list);
+      });
     }
     if (job.posts?.length) {
       const buckets = new Map();
@@ -295,6 +435,17 @@
       });
       for (const [groupName, posts] of buckets) {
         const group = job.postGroups?.find((item) => item.name === groupName);
+        const postIndices = posts.map((post) => job.posts.indexOf(post));
+        const ageTranslations = {};
+        for (const locale of ["hi", "bn"]) {
+          const values = postIndices.map((index) => {
+            const post = job.posts[index];
+            const source = post.ageMin == null && post.ageMax == null ? post.ageDescription : "";
+            const translated = job.contentTranslations?.[locale]?.posts?.[index]?.ageDescription;
+            return exists(source) && contentLanguage?.hasText(translated) ? translated : "";
+          });
+          if (contentLanguage?.hasText(values)) ageTranslations[locale] = values;
+        }
         const section = dataTable(
           parent,
           group?.totalVacancies != null ? `${groupName} — ${t("jobDetails.groupVacancies", { count: group.totalVacancies })}` : groupName,
@@ -306,12 +457,29 @@
               ? `${post.ageMin ?? t("jobDetails.any")}–${post.ageMax ?? t("jobDetails.any")}${post.ageCutoffDate ? ` ${t("jobDetails.asOfDate", { date: date(post.ageCutoffDate) })}` : ""}`
               : post.ageDescription,
           ]),
+          ageTranslations,
+          (rows, translation) => rows.map((row, index) => [
+            row[0], row[1], localizedValue(translation?.[index], row[2]),
+          ]),
         );
-        if (section && group?.description)
-          section.append(el("p", "", group.description));
+        if (section && group?.description) {
+          const groupIndex = job.postGroups.indexOf(group);
+          const groupTranslations = {};
+          for (const locale of ["hi", "bn"]) {
+            const value = job.contentTranslations?.[locale]?.postGroups?.[groupIndex]?.description;
+            if (contentLanguage?.hasText(value)) groupTranslations[locale] = { description: value };
+          }
+          localizedParagraph(section, group.description, Object.keys(groupTranslations).length
+            ? Object.fromEntries(Object.entries(groupTranslations).map(([locale, data]) => [locale, data.description]))
+            : null);
+        }
       }
-      const postDetails = window.JInfoJobContent?.renderPosts(job);
-      if (postDetails) parent.append(postDetails);
+      if (window.JInfoJobContent) {
+        contentSwitcher(parent, renderedPostTranslations(job), (target, _translation, locale) => {
+          const postDetails = window.JInfoJobContent.renderPosts(job, "job-detail", locale);
+          if (postDetails) target.append(postDetails);
+        });
+      }
     }
     if (window.JInfoJobContent) {
       if (Array.isArray(job.contentDocument) && job.contentDocument.length) parent.append(window.JInfoJobContent.renderDocument(job.contentDocument));
@@ -322,6 +490,19 @@
     if (!exists(value)) return;
     const row = el("div", "job-detail-field");
     row.append(el("dt", "", label), el("dd", "", text(value)));
+    parent.append(row);
+  }
+  function localizedField(parent, label, source, translations) {
+    if (!(contentLanguage?.available(translations) || []).length) {
+      field(parent, label, source);
+      return;
+    }
+    const row = el("div", "job-detail-field");
+    const value = el("dd");
+    row.append(el("dt", "", label), value);
+    contentSwitcher(value, translations, (target, translation) => {
+      target.append(el("span", "", text(localizedValue(translation, source))));
+    });
     parent.append(row);
   }
   function listSection(parent, title, items) {
@@ -371,7 +552,7 @@
     const videoId =
       window.JInfoYouTubeVideoId?.(job.howToApplyYoutubeUrl) || null;
     const steps = Array.isArray(job.howToApplySteps)
-      ? job.howToApplySteps.filter((step) => String(step).trim())
+      ? job.howToApplySteps.map((step, index) => ({ step, index })).filter(({ step }) => String(step).trim())
       : [];
     if (!videoId && !steps.length) return;
     const group = section(parent, t("jobDetails.howToApply"));
@@ -394,9 +575,16 @@
       group.append(note, frame);
     }
     if (steps.length) {
-      const list = el("ol", "job-detail-list");
-      steps.forEach((step) => list.append(el("li", "", step)));
-      group.append(list);
+      const translations = {};
+      for (const locale of ["hi", "bn"]) {
+        const values = steps.map(({ index }) => job.contentTranslations?.[locale]?.howToApplySteps?.[index] || "");
+        if (contentLanguage?.hasText(values)) translations[locale] = values;
+      }
+      contentSwitcher(group, translations, (target, translation) => {
+        const list = el("ol", "job-detail-list");
+        steps.forEach(({ step, index }, position) => list.append(el("li", "", localizedValue(translation?.[position], step))));
+        target.append(list);
+      });
     }
   }
   function showSignIn(message, capabilityKey) {
@@ -893,29 +1081,38 @@
     );
     const display = (key, value) =>
       varying.has(key) ? t("jobDetails.variesByPost") : value;
-    for (const [label, value] of [
-      [t("jobDetails.vacancyCount"), display("vacancyCount", job.vacancyCount)],
-      [t("jobDetails.applicationStartDate"), date(job.applicationStartDate)],
-      [t("jobDetails.applicationDeadline"), date(job.applicationDeadline)],
-      [t("jobDetails.examDate"), date(job.examDate)],
-      [t("jobDetails.qualification"), display("qualification", job.qualification)],
-      [t("jobDetails.ageLimit"), display("ageLimit", age)],
-      [t("jobDetails.ageRelaxation"), job.ageRelaxation],
-      [t("jobDetails.location"), display("location", job.location)],
-      [t("jobDetails.salary"), display("salary", formatMoney(job.salary))],
-      [t("jobDetails.selectionProcess"), display("selectionProcess", job.selectionProcess)],
-      [t("jobDetails.applicationFee"), display("applicationFee", formatMoney(job.applicationFee))],
-      [t("jobDetails.categoryEligibility"), job.categoryEligibility],
-      [t("jobDetails.genderEligibility"), job.genderEligibility],
-    ])
-      field(facts, label, value);
+    const translationFor = (key, source) => Object.fromEntries(["hi", "bn"].flatMap((locale) => {
+      const value = job.contentTranslations?.[locale]?.[key];
+      const hasSource = Array.isArray(source)
+        ? source.some((item) => typeof item === "string" && item.trim())
+        : exists(source);
+      return hasSource && contentLanguage?.hasText(value) ? [[locale, value]] : [];
+    }));
+    field(facts, t("jobDetails.vacancyCount"), display("vacancyCount", job.vacancyCount));
+    field(facts, t("jobDetails.applicationStartDate"), date(job.applicationStartDate));
+    field(facts, t("jobDetails.applicationDeadline"), date(job.applicationDeadline));
+    field(facts, t("jobDetails.examDate"), date(job.examDate));
+    if (varying.has("qualification")) field(facts, t("jobDetails.qualification"), display("qualification", job.qualification));
+    else localizedField(facts, t("jobDetails.qualification"), job.qualification, translationFor("qualification", job.qualification));
+    field(facts, t("jobDetails.ageLimit"), display("ageLimit", age));
+    localizedField(facts, t("jobDetails.ageRelaxation"), job.ageRelaxation, translationFor("ageRelaxation", job.ageRelaxation));
+    field(facts, t("jobDetails.location"), display("location", job.location));
+    field(facts, t("jobDetails.salary"), display("salary", formatMoney(job.salary)));
+    if (varying.has("selectionProcess")) field(facts, t("jobDetails.selectionProcess"), display("selectionProcess", job.selectionProcess));
+    else localizedField(facts, t("jobDetails.selectionProcess"), job.selectionProcess, translationFor("selectionProcess", job.selectionProcess));
+    field(facts, t("jobDetails.applicationFee"), display("applicationFee", formatMoney(job.applicationFee)));
+    field(facts, t("jobDetails.categoryEligibility"), job.categoryEligibility);
+    field(facts, t("jobDetails.genderEligibility"), job.genderEligibility);
     if (!facts.querySelector("dd")) facts.remove();
     if (varying.size && window.JInfoJobContent)
       sections.append(window.JInfoJobContent.renderConditionalFields(job));
     if (job.description) {
-      section(sections, t("jobDetails.aboutRecruitment")).append(
-        el("p", "job-detail-paragraph", job.description),
-      );
+      const descriptionTranslations = {};
+      for (const locale of ["hi", "bn"]) {
+        const value = job.contentTranslations?.[locale]?.description;
+        if (contentLanguage?.hasText(value)) descriptionTranslations[locale] = value;
+      }
+      localizedParagraph(section(sections, t("jobDetails.aboutRecruitment")), job.description, descriptionTranslations);
     }
     renderHowToApply(sections, job);
     renderAuthoringData(sections, job);

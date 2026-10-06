@@ -84,5 +84,5 @@ test('job titles and authored job content are kept out of translation lookups', 
   assert.doesNotMatch(details, /\bt\([^\n]*\{[^\n]*(?:title|organization):\s*job\./);
   assert.doesNotMatch(content, /\bt\(\s*(?:job|post|item|block)\.(?:name|title|description|body|url)/);
   assert.match(details, /el\("h1",\s*"",\s*job\.title\)/);
-  assert.match(details, /el\("p",\s*"job-detail-paragraph",\s*job\.description\)/);
+  assert.match(details, /localizedParagraph\(section\(sections, t\("jobDetails\.aboutRecruitment"\)\), job\.description/);
 });

@@ -104,6 +104,11 @@
   },
   "jobDetails": {
     "fallbackTitle": "Job details",
+    "contentLanguage": "Job content language",
+    "contentLanguageOriginal": "Original (English)",
+    "contentLanguageHindi": "Hindi",
+    "contentLanguageBengali": "Bengali",
+    "contentTranslationUnavailable": "{language} translation is unavailable; showing the original English content.",
     "metaDescription": "Recruitment details and application information on SetBGet.",
     "notFound": "Job not found.",
     "noLongerAvailable": "This job is no longer available.",

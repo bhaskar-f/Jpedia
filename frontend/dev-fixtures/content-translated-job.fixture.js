@@ -1,0 +1,1 @@
+../../backend/src/fixtures/content-translated-job.fixture.js

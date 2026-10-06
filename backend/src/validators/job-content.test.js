@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { job, jobDraft } = require('./schemas');
-const { rankRelated } = require('../services/job.service');
+const { rankRelated, mergeContentTranslations } = require('../services/job.service');
 const pid = '64b000000000000000000001';
 const base = (extra = {}) => ({ title: 'Recruitment notice', organization: 'Public Board', ...extra });
 const block = (type, data) => ({ type, data });
@@ -10,6 +10,45 @@ test('draft jobs accept an empty document without title or organization while co
   assert.equal(jobDraft.safeParse({ contentDocument: [] }).success, true);
   assert.equal(jobDraft.safeParse({ contentDocument: [], title: '', organization: '' }).success, true);
   assert.equal(job.safeParse({ contentDocument: [] }).success, false);
+});
+
+test('job translations accept bounded Hindi and Bengali explanatory fields', () => {
+  const result = jobDraft.safeParse({
+    contentTranslations: {
+      hi: {
+        description: 'हिंदी में विवरण',
+        importantDates: [{ description: 'आवेदन की जानकारी' }],
+        qualifications: [{ additionalRequirement: 'अतिरिक्त योग्यता', notes: 'ध्यान दें' }],
+        howToApplySteps: ['आवेदन करें'],
+      },
+      bn: { salaryInfo: { description: 'বেতনের ব্যাখ্যা' } },
+    },
+  });
+  assert.equal(result.success, true);
+});
+
+test('job translations reject unsupported locales, protected fields, and unknown shapes', () => {
+  for (const contentTranslations of [
+    { en: { description: 'English copy' } },
+    { hi: { title: 'Translated title' } },
+    { bn: { importantLinks: [{ url: 'https://example.org' }] } },
+    { hi: { contentDocument: [{ type: 'p', text: 'Translated rich content' }] } },
+    { hi: { description: 'A'.repeat(20001) } },
+    { hi: { howToApplySteps: Array.from({ length: 101 }, () => 'Apply') } },
+    { hi: {} },
+  ]) {
+    assert.equal(jobDraft.safeParse({ contentTranslations }).success, false);
+  }
+});
+
+test('partial translation updates retain the other language and existing locale fields', () => {
+  assert.deepEqual(
+    mergeContentTranslations(
+      { hi: { description: 'पुराना विवरण', qualification: 'पुरानी योग्यता' }, bn: { description: 'পুরোনো বিবরণ' } },
+      { hi: { description: 'नया विवरण' } },
+    ),
+    { hi: { description: 'नया विवरण', qualification: 'पुरानी योग्यता' }, bn: { description: 'পুরোনো বিবরণ' } },
+  );
 });
 
 test('job content architecture accepts single and multi-post legacy recruitment data', () => {

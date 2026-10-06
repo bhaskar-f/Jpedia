@@ -104,6 +104,11 @@
   },
   "jobDetails": {
     "fallbackTitle": "চাকরির বিবরণ",
+    "contentLanguage": "চাকরির বিষয়বস্তুর ভাষা",
+    "contentLanguageOriginal": "মূল (ইংরেজি)",
+    "contentLanguageHindi": "হিন্দি",
+    "contentLanguageBengali": "বাংলা",
+    "contentTranslationUnavailable": "{language} অনুবাদ উপলভ্য নয়; মূল ইংরেজি বিষয়বস্তু দেখানো হচ্ছে।",
     "metaDescription": "SetBGet-এ নিয়োগের বিবরণ এবং আবেদনের তথ্য।",
     "notFound": "চাকরিটি পাওয়া যায়নি।",
     "noLongerAvailable": "এই চাকরিটি আর উপলভ্য নয়।",
