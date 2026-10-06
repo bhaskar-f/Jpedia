@@ -45,6 +45,13 @@ const translatedJobPost = z.object({
   additionalRequirements: shortText(2000).optional(),
   postSpecificNotes: shortText(2000).optional(),
 }).strict();
+const translationKey = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+const richDocumentTranslations = z.record(translationKey, z.string().trim().min(1).max(20000)).superRefine((translations, ctx) => {
+  const keys = Object.keys(translations);
+  if (keys.length > 10000) ctx.addIssue({ code:z.ZodIssueCode.custom, message:'Document translations contain too many text runs.' });
+  if (keys.reduce((size, key) => size + translations[key].length, 0) > 500000)
+    ctx.addIssue({ code:z.ZodIssueCode.custom, message:'Document translations exceed 500,000 characters.' });
+});
 const translatedJobContent = z.object({
   description: z.string().max(20000).optional(),
   qualification: z.string().max(500).optional(),
@@ -65,6 +72,7 @@ const translatedJobContent = z.object({
   importantInstructions: z.array(z.object({ text: shortText(2000).optional() }).strict()).max(100).optional(),
   posts: z.array(translatedJobPost).max(100).optional(),
   postGroups: z.array(z.object({ description: shortText(500).optional() }).strict()).max(50).optional(),
+  contentDocument: richDocumentTranslations.optional(),
 }).strict().superRefine((translation, ctx) => {
   const hasText = value => {
     if (typeof value === 'string') return value.trim().length > 0;
@@ -72,7 +80,8 @@ const translatedJobContent = z.object({
     if (value && typeof value === 'object') return Object.values(value).some(hasText);
     return false;
   };
-  if (!hasText(translation)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'A translation must contain at least one eligible text field.' });
+  const clearingDocumentTranslations = Object.keys(translation).length === 1 && translation.contentDocument && Object.keys(translation.contentDocument).length === 0;
+  if (!hasText(translation) && !clearingDocumentTranslations) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'A translation must contain at least one eligible text field.' });
 });
 const contentTranslationsSchema = z.object({ hi: translatedJobContent.optional(), bn: translatedJobContent.optional() }).strict().superRefine((translations, ctx) => {
   if (!translations.hi && !translations.bn) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Provide a Hindi or Bengali translation.' });
@@ -94,13 +103,20 @@ const contentBlock = z.discriminatedUnion('type', Object.entries(blockData).map(
 const documentNode = z.lazy(() => z.object({
   type: z.enum(['p','h1','h2','h3','ul','ol','li','table','thead','tbody','tr','th','td','blockquote','hr','strong','em','u','s','a','span','div','br']),
   text: z.string().max(20000).optional(),
+  translationKey: translationKey.optional(),
   attrs: z.object({ id:z.string().regex(/^heading-[a-z0-9-]{1,80}$/).optional(), href:z.string().url().refine(value=>['http:','https:'].includes(new URL(value).protocol),'URL must use HTTP or HTTPS').optional(), align:z.enum(['left','center','right']).optional() }).strict().optional(),
   content: z.array(documentNode).max(500).optional(),
 }).strict());
 const documentNodes = z.array(documentNode).max(2000).superRefine((nodes,ctx)=>{
-  let size=0,count=0;
+  let size=0,count=0; const keys = new Set();
   const inspect=(items,parent='',depth=0,tableState=null,path=[])=>items.forEach((item,index)=>{
     const here=[...path,index];size+=(item.text||'').length;count++;
+    if (item.translationKey) {
+      if (item.type !== 'span' || !item.text?.trim() || item.content?.length || item.attrs)
+        ctx.addIssue({ code:z.ZodIssueCode.custom, path:here, message:'Translation keys may only mark non-empty span text runs without attributes or child nodes.' });
+      if (keys.has(item.translationKey)) ctx.addIssue({ code:z.ZodIssueCode.custom, path:here, message:'Translation keys must be unique in a document.' });
+      keys.add(item.translationKey);
+    }
     if(depth>40)ctx.addIssue({code:z.ZodIssueCode.custom,path:here,message:'Document nesting is too deep.'});
     const allowed={table:['thead','tbody','tr'],thead:['tr'],tbody:['tr'],tr:['th','td'],ul:['li'],ol:['li']};
     if(allowed[parent]&&!allowed[parent].includes(item.type))ctx.addIssue({code:z.ZodIssueCode.custom,path:here,message:`Invalid ${parent} structure.`});
@@ -110,7 +126,7 @@ const documentNodes = z.array(documentNode).max(2000).superRefine((nodes,ctx)=>{
   });
   inspect(nodes);if(size>500000)ctx.addIssue({code:z.ZodIssueCode.custom,message:'Document text exceeds 500,000 characters.'});if(count>10000)ctx.addIssue({code:z.ZodIssueCode.custom,message:'Document contains too many nested nodes.'});
 });
-const job = jobBase.extend({
+const jobFields = {
   contentTranslations: contentTranslationsSchema.optional(),
   contentDocument: documentNodes.optional(),
   importantDates: z.array(dateRow).max(100).optional(), vacancyBreakdown: z.array(vacancyRow).max(100).optional(),
@@ -122,11 +138,21 @@ const job = jobBase.extend({
   documentsRequired: z.array(z.object({ name: shortText(160), description: shortText(1000).optional(), required: z.boolean().optional() }).strict()).max(100).optional(),
   importantInstructions: z.array(z.object({ text: shortText(2000), category: shortText(120).optional() }).strict()).max(100).optional(),
   posts: z.array(jobPost).max(100).optional(), postGroups: z.array(z.object({ name: shortText(120), description: shortText(500).optional(), totalVacancies: z.number().int().nonnegative().optional() }).strict()).max(50).optional(),
-});
-const jobDraft = job.extend({
+};
+function validateDocumentTranslations(value, ctx) {
+  const keys = new Set();
+  const visit = nodes => (nodes || []).forEach(node => { if (node.translationKey) keys.add(node.translationKey); visit(node.content); });
+  visit(value.contentDocument);
+  for (const locale of ['hi', 'bn']) {
+    for (const key of Object.keys(value.contentTranslations?.[locale]?.contentDocument || []))
+      if (!keys.has(key)) ctx.addIssue({ code:z.ZodIssueCode.custom, path:['contentTranslations',locale,'contentDocument',key], message:'Translation key does not refer to a marked text run in contentDocument.' });
+  }
+}
+const job = jobBase.extend(jobFields).superRefine(validateDocumentTranslations);
+const jobDraft = jobBase.extend({ ...jobFields,
   title: z.string().trim().max(200).optional(),
   organization: z.string().trim().max(200).optional(),
-});
+}).superRefine(validateDocumentTranslations);
 const application = z.object({ job: id, status: z.enum(['NOT_APPLIED','APPLIED','ADMIT_CARD','EXAM_SCHEDULED','EXAM_COMPLETED','RESULT','INTERVIEW','SELECTED','REJECTED']).optional(), appliedAt: z.coerce.date().optional(), examDate: z.coerce.date().optional(), result: z.string().max(500).optional(), notes: z.string().max(3000).optional(), reminderDate: z.coerce.date().optional() }).strict();
 const applicationUpdate = application.omit({job:true}).strict();
 const board = z.object({name:z.string().trim().min(2).max(120),slug:z.string().trim().min(2).max(120).optional(),shortDescription:z.string().max(300).optional(),description:z.string().max(10000).optional(),about:z.string().max(10000).optional(),organization:z.string().max(160).optional(),category:z.string().max(100).optional(),officialWebsite:url,officialNotificationWebsite:url,location:z.string().max(160).optional(),icon:z.string().max(500).optional(),active:z.boolean().optional()}).strict();

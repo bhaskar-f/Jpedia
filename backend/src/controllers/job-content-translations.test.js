@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { Job } = require('../models');
 const { job: jobSchema } = require('../validators/schemas');
 const { getPublic } = require('./job.controller');
+const { mergeContentTranslations } = require('../services/job.service');
 const {
   translatedJob,
   hindiOnlyJob,
@@ -74,6 +75,9 @@ test('public job detail response includes stored translations and preserves fact
   assert.equal(response.contentTranslations.bn.ageRelaxation, undefined);
   assert.ok(response.contentTranslations.bn.salaryInfo.description);
   assert.equal(response.contentTranslations.hi.salaryInfo, undefined);
+  const flattenedJob = job.toObject({ flattenMaps: true });
+  assert.deepEqual(response.contentTranslations.hi.contentDocument, flattenedJob.contentTranslations.hi.contentDocument);
+  assert.deepEqual(response.contentDocument, flattenedJob.contentDocument);
 
   for (const field of factualFields) {
     assert.deepEqual(response[field], job[field], `${field} should stay canonical English/source data`);
@@ -115,4 +119,15 @@ test('translated structured items remain aligned to their source item positions'
   assert.equal(response.contentTranslations.hi.howToApplySteps[1], 'आवेदन पत्र पूरा करके अंतिम तिथि से पहले जमा करें।');
   assert.equal(response.importantDates[1].event, 'Last date to apply');
   assert.equal(response.contentTranslations.bn.importantDates[1].description, 'পোর্টাল বন্ধ হওয়ার আগে সম্পূর্ণ আবেদন জমা দিন।');
+});
+
+test('structured translation updates preserve rich-document maps in both locales', async () => {
+  const job = await validatedPublishedJob(translatedJob());
+  const existing = job.contentTranslations;
+  job.contentTranslations = mergeContentTranslations(existing, { hi: { description: 'अपडेट किया गया विवरण' } });
+  await job.validate();
+  const stored = job.toObject({ flattenMaps: true }).contentTranslations;
+  assert.equal(stored.hi.description, 'अपडेट किया गया विवरण');
+  assert.ok(stored.hi.contentDocument);
+  assert.ok(stored.bn.contentDocument);
 });

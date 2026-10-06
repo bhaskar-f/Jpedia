@@ -482,7 +482,15 @@
       }
     }
     if (window.JInfoJobContent) {
-      if (Array.isArray(job.contentDocument) && job.contentDocument.length) parent.append(window.JInfoJobContent.renderDocument(job.contentDocument));
+      if (Array.isArray(job.contentDocument) && job.contentDocument.length) {
+        const documentTranslations = Object.fromEntries(["hi", "bn"].flatMap((locale) => {
+          const map = job.contentTranslations?.[locale]?.contentDocument;
+          return contentLanguage?.hasText(map) ? [[locale, map]] : [];
+        }));
+        contentSwitcher(parent, documentTranslations, (target, translations) => {
+          target.append(window.JInfoJobContent.renderDocument(job.contentDocument, { translations: translations || {} }));
+        });
+      }
       else parent.append(window.JInfoJobContent.renderSections(job.contentSections, job.contentBlocks));
     }
   }

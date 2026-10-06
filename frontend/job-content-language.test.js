@@ -21,6 +21,7 @@ test('stored content languages are available only when that section has text', (
   assert.deepEqual([...api.available({ bn: { description: 'বাংলা' } })], ['bn']);
   assert.deepEqual([...api.available({ hi: { description: 'हिंदी' }, bn: { description: 'বাংলা' } })], ['hi', 'bn']);
   assert.deepEqual([...api.available({ hi: { description: '  ' }, bn: {} })], []);
+  assert.deepEqual([...api.available({ hi: { contentDocument: { key: 'हिंदी' } }, bn: { contentDocument: {} } })], ['hi']);
 });
 
 test('matching UI language is the initial content selection only when stored', () => {

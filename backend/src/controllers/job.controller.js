@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const { evaluateJobMatch } = require('../services/jobMatch.service');
 const PUBLIC_JOB_FIELDS=['_id','title','slug','organization','board','boardName','category','tags','description','vacancyCount','applicationStartDate','applicationDeadline','examDate','qualification','ageMin','ageMax','ageRelaxation','location','salary','selectionProcess','applicationFee','categoryEligibility','genderEligibility','officialWebsite','officialNotificationUrl','officialApplyUrl','howToApplyYoutubeUrl','source','sourceUrl','syllabusResources','pyqResources','studyResources','mockTestResources','otherResources','importantDates','vacancyBreakdown','ageCutoffDate','ageDescription','ageRelaxations','applicationFees','qualifications','selectionStages','salaryInfo','howToApplySteps','importantLinks','contentDocument','contentBlocks','contentSections','conditionalFields','documentsRequired','importantInstructions','posts','postGroups','status'];
 const publicJob= (job, { includeContentTranslations = false } = {}) => {
-  const value=typeof job.toObject==='function'?job.toObject():job;
+  const value=typeof job.toObject==='function'?job.toObject({ flattenMaps: true }):job;
   const fields = includeContentTranslations ? [...PUBLIC_JOB_FIELDS, 'contentTranslations'] : PUBLIC_JOB_FIELDS;
   return Object.fromEntries(fields.filter(key=>value[key]!==undefined).map(key=>[key,value[key]]));
 };

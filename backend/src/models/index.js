@@ -58,6 +58,7 @@ const translatedJobContent = new Schema({
   importantInstructions: { type: [translatedInstruction], default: undefined },
   posts: { type: [translatedRecruitmentPost], default: undefined },
   postGroups: { type: [translatedPostGroup], default: undefined },
+  contentDocument: { type: Map, of: String, default: undefined },
 }, { _id: false, strict: 'throw' });
 const contentTranslations = new Schema({
   hi: { type: translatedJobContent },

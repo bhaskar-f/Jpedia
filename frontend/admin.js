@@ -1401,7 +1401,10 @@
     "DIV",
     "BR",
   ]);
-  function addDocumentEditor(form, initial = [], onError = () => {}) {
+  function addDocumentEditor(form, initial = [], onError = () => {}, initialTranslations = {}) {
+    const contentTranslationMaps = Object.fromEntries(["hi", "bn"].map((locale) => [
+      locale, Object.fromEntries(Object.entries(initialTranslations?.[locale]?.contentDocument || {})),
+    ]));
     const section = el("section", "admin-repeater admin-document-editor");
     section.dataset.jobDocument = "";
     section.append(el("h2", "", "Content"));
@@ -1435,6 +1438,7 @@
                   : String(item.type).toUpperCase();
           const node = document.createElement(tag.toLowerCase());
           if (item.text) node.textContent = item.text;
+          if (item.translationKey) node.dataset.translationKey = item.translationKey;
           if (item.attrs?.id) node.id = item.attrs.id;
           if (item.attrs?.href) node.href = item.attrs.href;
           (item.content || []).forEach((child) => {
@@ -1501,8 +1505,10 @@
       });
       toc.append(list);
     };
-    section.loadDocument = (nodes) => {
+    section.loadDocument = (nodes, translations = {}) => {
       editor.replaceChildren(...dom(nodes));
+      for (const locale of ["hi", "bn"])
+        contentTranslationMaps[locale] = Object.fromEntries(Object.entries(translations?.[locale]?.contentDocument || {}));
       if (!editor.childNodes.length) {
         const p = document.createElement("p");
         p.append(document.createElement("br"));
@@ -1510,6 +1516,7 @@
       }
       savedRange = null;
       updateToc();
+      refreshTranslationRows();
       editor.dataset.empty = String(
         !editor.textContent.trim() && !editor.querySelector("table,ul,ol,hr"),
       );
@@ -1583,6 +1590,85 @@
       b.setAttribute("aria-label", label);
       return b;
     };
+    const translationPanel = el("section", "document-translation-panel");
+    translationPanel.append(
+      el("h3", "", "Optional translations"),
+      el("p", "admin-muted", "English remains the source. Mark explanatory text only; do not translate factual values, codes, dates, amounts, or URLs."),
+    );
+    const translationRows = el("div", "document-translation-rows");
+    translationPanel.append(translationRows);
+    const refreshTranslationRows = () => {
+      const active = [...editor.querySelectorAll("span[data-translation-key]")];
+      const liveKeys = new Set(active.map((node) => node.dataset.translationKey));
+      for (const locale of ["hi", "bn"])
+        for (const key of Object.keys(contentTranslationMaps[locale]))
+          if (!liveKeys.has(key)) delete contentTranslationMaps[locale][key];
+      translationRows.replaceChildren();
+      if (!active.length) {
+        translationRows.append(el("p", "admin-muted", "Select explanatory text in the article and choose Enable translations."));
+        return;
+      }
+      active.forEach((node, index) => {
+        const key = node.dataset.translationKey;
+        const row = el("fieldset", "document-translation-row");
+        row.append(el("legend", "", `Translatable text ${index + 1}`));
+        row.append(el("strong", "", "English source (canonical)"), el("p", "document-translation-source", node.textContent || "(empty source text)"));
+        for (const [locale, label] of [["hi", "Hindi Translation (optional)"], ["bn", "Bengali Translation (optional)"]]) {
+          const field = el("label", "document-translation-field");
+          field.append(el("span", "", label));
+          const input = el("textarea");
+          input.rows = 2;
+          input.maxLength = 20000;
+          input.value = contentTranslationMaps[locale][key] || "";
+          input.addEventListener("input", () => {
+            const value = input.value.trim();
+            if (value) contentTranslationMaps[locale][key] = value;
+            else delete contentTranslationMaps[locale][key];
+          });
+          field.append(input);
+          row.append(field);
+        }
+        row.append(button("Remove translation mark", () => {
+          delete node.dataset.translationKey;
+          for (const locale of ["hi", "bn"]) delete contentTranslationMaps[locale][key];
+          refreshTranslationRows();
+        }, "is-secondary"));
+        translationRows.append(row);
+      });
+    };
+    const enableTranslations = toolButton("Enable translations", () => {
+      const selection = getSelection();
+      if (!selection?.rangeCount || selection.isCollapsed) {
+        onError("Select one explanatory text run in the article first.");
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      if (range.startContainer !== range.endContainer || range.startContainer.nodeType !== Node.TEXT_NODE) {
+        onError("Select text within one run. Split prose and factual values into separate runs first.");
+        return;
+      }
+      const selectedText = range.toString().trim();
+      if (/^(?:https?:\/\/|www\.)/i.test(selectedText) || /^(?:[₹$€£]?\s*\d[\d,.]*\s*(?:%|years?|marks?)?|\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})$/i.test(selectedText) || (/\d/.test(selectedText) && /^[A-Z0-9]+(?:[-_/][A-Z0-9]+)*$/.test(selectedText))) {
+        onError("This looks like a URL, date, amount, percentage, count, or code. Keep protected factual values in English.");
+        return;
+      }
+      if (range.startContainer.parentElement?.closest("[data-translation-key]")) {
+        onError("This text run already has translations enabled.");
+        return;
+      }
+      const marked = document.createElement("span");
+      marked.dataset.translationKey = window.crypto?.randomUUID?.() || "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+        const random = Math.random() * 16 | 0;
+        return (character === "x" ? random : (random & 3) | 8).toString(16);
+      });
+      try { range.surroundContents(marked); }
+      catch { onError("Select a single text run to enable translations."); return; }
+      selection.removeAllRanges();
+      savedRange = null;
+      refreshTranslationRows();
+    });
+    enableTranslations.type = "button";
+    toolbar.append(enableTranslations);
     const command = (label, cmd, value) => {
       const b = toolButton(label, () => {
         editor.focus();
@@ -1713,6 +1799,7 @@
     section.append(
       toolbar,
       editor,
+      translationPanel,
       toc,
       el(
         "p",
@@ -1720,7 +1807,19 @@
         "Write the recruitment article as one document. Use headings to generate its clickable table of contents.",
       ),
     );
+    refreshTranslationRows();
+    editor.addEventListener("input", refreshTranslationRows);
     form.append(section);
+    section.readTranslations = () => {
+      const active = new Set([...editor.querySelectorAll("span[data-translation-key]")].map((node) => node.dataset.translationKey));
+      const result = {};
+      for (const locale of ["hi", "bn"]) {
+        const contentDocument = Object.fromEntries(Object.entries(contentTranslationMaps[locale]).filter(([key, value]) => active.has(key) && value.trim()));
+        const hadStoredMap = Object.prototype.hasOwnProperty.call(initialTranslations?.[locale] || {}, "contentDocument");
+        if (Object.keys(contentDocument).length || hadStoredMap) result[locale] = { contentDocument };
+      }
+      return Object.keys(result).length ? result : null;
+    };
     return section;
   }
   function legacyDocument(job) {
@@ -1870,11 +1969,17 @@
         ["left", "center", "right"].includes(node.style.textAlign)
       )
         attrs.align = node.style.textAlign;
+      const out = { type: tag.toLowerCase() };
+      if (tag === "SPAN" && node.dataset.translationKey) {
+        out.translationKey = node.dataset.translationKey;
+        out.text = node.textContent;
+        if (Object.keys(attrs).length) out.attrs = attrs;
+        return out;
+      }
       const content = [...node.childNodes].flatMap((child) => {
         const val = convert(child);
         return Array.isArray(val) ? val : val ? [val] : [];
       });
-      const out = { type: tag.toLowerCase() };
       if (Object.keys(attrs).length) out.attrs = attrs;
       if (content.length) out.content = content;
       return out;
@@ -3105,8 +3210,12 @@
     const initialDocument = isNew
       ? Array.isArray(templateData?.contentDocument) ? templateData.contentDocument : []
       : job.contentDocument?.length ? job.contentDocument : legacyDocument(job);
-    const blocksEditor = addDocumentEditor(form, initialDocument, (message) =>
-      feedback.replaceChildren(notice(message, "is-error")),
+    const initialTranslations = isNew ? templateData?.contentTranslations || {} : job.contentTranslations || {};
+    const blocksEditor = addDocumentEditor(
+      form,
+      initialDocument,
+      (message) => feedback.replaceChildren(notice(message, "is-error")),
+      initialTranslations,
     );
     const footer = el("div", "admin-form-actions");
     const save = button("Save Draft", null, "is-primary");
@@ -3121,7 +3230,7 @@
         const dialog = el("dialog", "admin-dialog");
         dialog.append(el("h2", "", "Insert a saved document template"));
         templates.forEach((template) => dialog.append(button(template.name, () => {
-          blocksEditor.loadDocument(template.data?.contentDocument || []);
+          blocksEditor.loadDocument(template.data?.contentDocument || [], template.data?.contentTranslations || {});
           dialog.close();
           feedback.replaceChildren(notice(`${template.name} inserted.`));
         }, "is-secondary")));
@@ -3135,12 +3244,18 @@
       const name = prompt("Template name");
       if (!name?.trim()) return;
       try {
-        await api("/author/templates", { method: "POST", body: JSON.stringify({ name: name.trim(), data: { contentDocument: readDocument(blocksEditor) } }) });
+        await api("/author/templates", { method: "POST", body: JSON.stringify({ name: name.trim(), data: { contentDocument: readDocument(blocksEditor), contentTranslations: blocksEditor.readTranslations() } }) });
         feedback.replaceChildren(notice("Document template saved."));
       } catch (error) { feedback.replaceChildren(notice(error.message, "is-error")); }
     }, "is-secondary"));
     if (!isNew) footer.append(button("Preview", () => {
-      try { previewJob({ ...job, contentDocument: readDocument(blocksEditor) }); }
+      try {
+        const previewTranslations = blocksEditor.readTranslations();
+        const contentTranslations = { ...(job.contentTranslations || {}) };
+        for (const [locale, values] of Object.entries(previewTranslations || {}))
+          contentTranslations[locale] = { ...(contentTranslations[locale] || {}), ...values };
+        previewJob({ ...job, contentDocument: readDocument(blocksEditor), contentTranslations });
+      }
       catch (error) { feedback.replaceChildren(notice(error.message, "is-error")); }
     }, "is-secondary"));
     footer.append(save);
@@ -3150,7 +3265,7 @@
           save.disabled = true;
           feedback.replaceChildren();
           try {
-            await api(`/jobs/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ contentDocument: readDocument(blocksEditor) }) });
+            await api(`/jobs/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ contentDocument: readDocument(blocksEditor), ...(blocksEditor.readTranslations() ? { contentTranslations: blocksEditor.readTranslations() } : {}) }) });
             await api(`/jobs/${encodeURIComponent(id)}/submit-review`, { method: "POST" });
             feedback.replaceChildren(notice("Submitted for review."));
             setTimeout(() => location.assign("/admin/jobs"), 700);
@@ -3166,7 +3281,8 @@
       save.textContent = "Saving…";
       feedback.replaceChildren();
       try {
-        const payload = { contentDocument: readDocument(blocksEditor) };
+        const richTranslations = blocksEditor.readTranslations();
+        const payload = { contentDocument: readDocument(blocksEditor), ...(richTranslations ? { contentTranslations: richTranslations } : {}) };
         const response = isNew
           ? await api("/jobs", { method: "POST", body: JSON.stringify(payload) })
           : await api(`/jobs/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) });

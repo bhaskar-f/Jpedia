@@ -57,6 +57,7 @@
   function renderDocument(nodes, options = {}) {
     const root = document.createElement("div");
     root.className = options.className || "job-document";
+    const translations = options.translations || options.translationMap || {};
     const toc = [],
       used = new Set();
     function nodeText(item) {
@@ -88,7 +89,9 @@
       }
       if (["left", "center", "right"].includes(attrs.align))
         node.style.textAlign = attrs.align;
-      if (item.text) node.textContent = item.text;
+      const translatedText = item.translationKey ? translations[item.translationKey] : null;
+      if (typeof translatedText === "string" && translatedText.trim()) node.textContent = translatedText;
+      else if (item.text) node.textContent = item.text;
       (item.content || []).forEach((child) => {
         const rendered = build(child);
         if (rendered) node.append(rendered);

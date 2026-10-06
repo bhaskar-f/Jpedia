@@ -23,6 +23,9 @@ test('Vercel builds require an explicit public API URL and embed only that URL',
   assert.doesNotMatch(config, /SECRET|MONGODB|PASSWORD|JWT_/);
   assert.ok(fs.existsSync(path.join(root, 'public', 'i18n.js')));
   assert.ok(fs.existsSync(path.join(root, 'public', 'job-content-language.js')));
+  assert.ok(fs.readFileSync(path.join(root, 'public', 'job-content.js'), 'utf8').includes('translationMap'));
+  for (const developmentOnly of ['translation-preview.html', 'translation-preview.js', 'translation-preview-restore.js', 'dev-fixtures/content-translated-job.fixture.js'])
+    assert.equal(fs.existsSync(path.join(root, 'public', developmentOnly)), false, `${developmentOnly} must not enter production output`);
   for (const locale of ['en', 'hi', 'bn'])
     assert.ok(fs.existsSync(path.join(root, 'public', 'locales', `${locale}.json`)));
 });

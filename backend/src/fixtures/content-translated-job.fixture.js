@@ -29,6 +29,12 @@ const baseJob = {
     { event: 'Applications open', date: '2026-11-01T00:00:00.000Z', description: 'The application portal opens at 10:00 AM.' },
     { event: 'Last date to apply', date: '2026-12-15T23:59:59.000Z', description: 'Submit the completed form before the portal closes.' },
   ],
+  contentDocument: [
+    { type: 'h2', attrs: { id: 'heading-preview-guidance' }, content: [{ type: 'span', translationKey: '8b18ebd2-e9ee-4f0d-995c-48f9e10506a1', text: 'Application guidance' }] },
+    { type: 'p', content: [{ type: 'span', text: 'This English-only paragraph has no stored translation.' }] },
+    { type: 'p', content: [{ type: 'span', text: 'Use the ' }, { type: 'a', attrs: { href: 'https://recruitment.example.gov.in/notice.pdf' }, content: [{ type: 'span', translationKey: '619429fe-6e5b-4f1b-9241-61b267453f52', text: 'official notification' }] }, { type: 'span', text: ' for complete details.' }] },
+    { type: 'table', content: [{ type: 'tbody', content: [{ type: 'tr', content: [{ type: 'th', content: [{ type: 'span', text: 'Vacancies' }] }, { type: 'td', content: [{ type: 'span', text: '240' }] }] }] }] },
+  ],
   contentTranslations: {
     hi: {
       description: 'मान्यता प्राप्त संस्थान से इंजीनियरिंग डिप्लोमा वाले उम्मीदवार आधिकारिक पोर्टल से आवेदन कर सकते हैं।',
@@ -42,6 +48,10 @@ const baseJob = {
         { description: 'आवेदन पोर्टल सुबह 10:00 बजे खुलेगा।' },
         { description: 'पोर्टल बंद होने से पहले पूरा आवेदन जमा करें।' },
       ],
+      contentDocument: {
+        '8b18ebd2-e9ee-4f0d-995c-48f9e10506a1': 'आवेदन संबंधी मार्गदर्शन',
+        '619429fe-6e5b-4f1b-9241-61b267453f52': 'आधिकारिक अधिसूचना',
+      },
     },
     bn: {
       description: 'স্বীকৃত প্রতিষ্ঠান থেকে ইঞ্জিনিয়ারিং ডিপ্লোমা থাকা প্রার্থীরা সরকারি পোর্টালে আবেদন করতে পারেন।',
@@ -56,6 +66,10 @@ const baseJob = {
       ],
       salaryInfo: {
         description: 'নির্বাচিত প্রার্থীরা প্রযোজ্য ভাতাসহ লেভেল ৬ অনুযায়ী বেতন পাবেন।',
+      },
+      contentDocument: {
+        '8b18ebd2-e9ee-4f0d-995c-48f9e10506a1': 'আবেদনের নির্দেশিকা',
+        '619429fe-6e5b-4f1b-9241-61b267453f52': 'সরকারি বিজ্ঞপ্তি',
       },
     },
   },

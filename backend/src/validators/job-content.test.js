@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { job, jobDraft } = require('./schemas');
 const { rankRelated, mergeContentTranslations } = require('../services/job.service');
 const pid = '64b000000000000000000001';
+const proseKey = '1b18ebd2-e9ee-4f0d-995c-48f9e10506a1';
 const base = (extra = {}) => ({ title: 'Recruitment notice', organization: 'Public Board', ...extra });
 const block = (type, data) => ({ type, data });
 
@@ -44,11 +45,35 @@ test('job translations reject unsupported locales, protected fields, and unknown
 test('partial translation updates retain the other language and existing locale fields', () => {
   assert.deepEqual(
     mergeContentTranslations(
-      { hi: { description: 'पुराना विवरण', qualification: 'पुरानी योग्यता' }, bn: { description: 'পুরোনো বিবরণ' } },
-      { hi: { description: 'नया विवरण' } },
+      { hi: { description: 'पुराना विवरण', qualification: 'पुरानी योग्यता', contentDocument: { [proseKey]: 'पुराना पाठ' } }, bn: { description: 'পুরোনো বিবরণ', contentDocument: { [proseKey]: 'পুরোনো লেখা' } } },
+      { hi: { description: 'नया विवरण', contentDocument: { [proseKey]: 'नया पाठ' } } },
     ),
-    { hi: { description: 'नया विवरण', qualification: 'पुरानी योग्यता' }, bn: { description: 'পুরোনো বিবরণ' } },
+    { hi: { description: 'नया विवरण', qualification: 'पुरानी योग्यता', contentDocument: { [proseKey]: 'नया पाठ' } }, bn: { description: 'পুরোনো বিবরণ', contentDocument: { [proseKey]: 'পুরোনো লেখা' } } },
   );
+});
+
+test('rich document translations accept only marked source text runs', () => {
+  const contentDocument = [{ type: 'p', content: [{ type: 'span', text: 'Apply online.', translationKey: proseKey }] }];
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { hi: { contentDocument: { [proseKey]: 'ऑनलाइन आवेदन करें।' } }, bn: { contentDocument: { [proseKey]: 'অনলাইনে আবেদন করুন।' } } } }).success, true);
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { hi: { contentDocument: { [proseKey]: 'ऑनलाइन आवेदन करें।' } } } }).success, true);
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { bn: { contentDocument: { [proseKey]: 'অনলাইনে আবেদন করুন।' } } } }).success, true);
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { hi: { contentDocument: { '1b18ebd2-e9ee-4f0d-995c-48f9e10506a2': 'অন্য রান' } } } }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument: [{ type: 'p', translationKey: proseKey, text: 'Not a span' }] }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument: [{ type: 'span', translationKey: proseKey, text: 'Has protected metadata', attrs: { href: 'https://example.org/' } }] }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { hi: { contentDocument: { [proseKey]: ' ' } } } }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { hi: { contentDocument: { arbitrary: 'text' } } } }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { hi: { contentDocument: { [proseKey]: { text: 'nested' } } } } }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { en: { contentDocument: { [proseKey]: 'Unsupported locale' } } } }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument, contentTranslations: { hi: { contentDocument: { [proseKey]: 'x'.repeat(20001) } } } }).success, false);
+  const oversized = Object.fromEntries(Array.from({ length: 26 }, (_, index) => [`1b18ebd2-e9ee-4f0d-995c-48f9e10506${String(index).padStart(2, '0')}`, 'x'.repeat(20000)]));
+  const manyRuns = Object.keys(oversized).map((key) => ({ type: 'span', text: 'x', translationKey: key }));
+  assert.equal(jobDraft.safeParse({ contentDocument: manyRuns, contentTranslations: { hi: { contentDocument: oversized } } }).success, false);
+});
+
+test('document translation keys are unique and may not be attached to factual structures', () => {
+  assert.equal(jobDraft.safeParse({ contentDocument: [{ type: 'span', text: 'one', translationKey: proseKey }, { type: 'span', text: 'two', translationKey: proseKey }] }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument: [{ type: 'td', text: '240', translationKey: proseKey }] }).success, false);
+  assert.equal(jobDraft.safeParse({ contentDocument: [{ type: 'span', text: 'Visit', translationKey: proseKey }], contentTranslations: { hi: { contentDocument: {} } } }).success, true);
 });
 
 test('job content architecture accepts single and multi-post legacy recruitment data', () => {

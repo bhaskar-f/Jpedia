@@ -3854,6 +3854,13 @@ body.home-page #loginBtn .home-account-icon { display: none; }
 .document-canvas { min-height:440px; max-width:100%; overflow-wrap:anywhere; padding:clamp(1rem,4vw,2.5rem); border:1px solid #d8dee8; border-radius:0 0 12px 12px; background:#fff; color:#192438; line-height:1.7; outline:none; }
 .document-canvas:focus { border-color:#5682d5; box-shadow:0 0 0 2px #5682d533; }
 .document-canvas[data-empty="true"]::before { content:'Start writing…'; color:#8792a4; pointer-events:none; }
+.document-translation-panel { margin-top:1rem; padding:1rem; border:1px solid #d8dee8; border-radius:10px; background:#f8fafc; }
+.document-translation-panel h3 { margin:0 0 .5rem; font-size:1rem; }
+.document-translation-row { display:grid; gap:.65rem; margin:.75rem 0; padding:.85rem; border:1px solid #d8dee8; border-radius:8px; background:#fff; }
+.document-translation-row legend { padding:0 .3rem; font-weight:650; }
+.document-translation-source { margin:.25rem 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.document-translation-field { display:grid; gap:.3rem; font-weight:600; }
+.document-translation-field textarea { width:100%; min-height:4rem; padding:.55rem; border:1px solid #b9c2cf; border-radius:6px; font:inherit; font-weight:400; resize:vertical; }
 .document-canvas h1,.document-canvas h2,.document-canvas h3,.job-document h1,.job-document h2,.job-document h3 { line-height:1.3; margin:1.5em 0 .55em; }
 .document-canvas table,.job-document table { border-collapse:collapse; width:100%; }
 .document-canvas th,.document-canvas td,.job-document th,.job-document td { border:1px solid #cbd3df; padding:.55rem .7rem; min-width:5rem; vertical-align:top; }
