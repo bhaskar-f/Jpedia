@@ -1352,6 +1352,10 @@
     postGroups: "Post Groups",
   };
   function validationMessage(error) {
+    const issues = error.details?.issues;
+    if (Array.isArray(issues) && issues.length) {
+      return issues.map(({ path, message }) => `${Array.isArray(path) && path.length ? path.join(".") : "Request"}: ${message}`).join(" · ");
+    }
     const fields = error.details?.fieldErrors;
     if (!fields || typeof fields !== "object") return error.message;
     const lines = Object.entries(fields).flatMap(([key, messages]) =>
@@ -3269,7 +3273,7 @@
             await api(`/jobs/${encodeURIComponent(id)}/submit-review`, { method: "POST" });
             feedback.replaceChildren(notice("Submitted for review."));
             setTimeout(() => location.assign("/admin/jobs"), 700);
-          } catch (error) { feedback.replaceChildren(notice(error.message, "is-error")); }
+          } catch (error) { feedback.replaceChildren(notice(validationMessage(error), "is-error")); }
           finally { save.disabled = false; }
         }, "is-secondary"),
       );
@@ -3292,7 +3296,7 @@
           feedback.replaceChildren(notice("Draft saved."));
           setTimeout(() => location.assign(`/admin/jobs/${savedId}/edit`), 700);
         } else feedback.replaceChildren(notice("Draft saved."));
-      } catch (error) { feedback.replaceChildren(notice(error.message, "is-error")); }
+      } catch (error) { feedback.replaceChildren(notice(validationMessage(error), "is-error")); }
       finally { save.disabled = false; save.textContent = "Save Draft"; }
     });
     content.append(form);

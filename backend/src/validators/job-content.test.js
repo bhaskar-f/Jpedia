@@ -70,6 +70,25 @@ test('rich document translations accept only marked source text runs', () => {
   assert.equal(jobDraft.safeParse({ contentDocument: manyRuns, contentTranslations: { hi: { contentDocument: oversized } } }).success, false);
 });
 
+test('Author Save Draft payload with a UUID text run and Hindi/Bengali sparse maps validates as sent', () => {
+  const key = '8b18ebd2-e9ee-4f0d-995c-48f9e10506a1';
+  const authorSavePayload = {
+    contentDocument: [
+      { type: 'h2', attrs: { id: 'heading-application-steps' }, content: [{ type: 'span', text: 'Application steps' }] },
+      { type: 'p', content: [{ type: 'span', translationKey: key, text: 'Submit the application online.' }] },
+      { type: 'p', content: [{ type: 'a', attrs: { href: 'https://example.gov/apply' }, content: [{ type: 'span', text: 'Apply online' }] }] },
+    ],
+    contentTranslations: {
+      hi: { contentDocument: { [key]: 'आवेदन ऑनलाइन जमा करें।' } },
+      bn: { contentDocument: { [key]: 'অনলাইনে আবেদন জমা দিন।' } },
+    },
+  };
+  const result = jobDraft.safeParse(JSON.parse(JSON.stringify(authorSavePayload)));
+  assert.equal(result.success, true, result.success ? '' : JSON.stringify(result.error.issues));
+  assert.deepEqual(result.data.contentDocument, authorSavePayload.contentDocument);
+  assert.deepEqual(result.data.contentTranslations, authorSavePayload.contentTranslations);
+});
+
 test('document translation keys are unique and may not be attached to factual structures', () => {
   assert.equal(jobDraft.safeParse({ contentDocument: [{ type: 'span', text: 'one', translationKey: proseKey }, { type: 'span', text: 'two', translationKey: proseKey }] }).success, false);
   assert.equal(jobDraft.safeParse({ contentDocument: [{ type: 'td', text: '240', translationKey: proseKey }] }).success, false);
