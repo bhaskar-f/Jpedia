@@ -57,16 +57,44 @@
   function renderDocument(nodes, options = {}) {
     const root = document.createElement("div");
     root.className = options.className || "job-document";
-    const translations = options.translations || options.translationMap || {};
+    const translations = options.contentTranslations || options.translationsByLocale || {};
+    const staticTranslations = options.translations || options.translationMap || {};
     const toc = [],
       used = new Set();
-    function nodeText(item) {
-      return item?.text || (item?.content || []).map(nodeText).join("");
+    function nodeText(item, translatedValues = {}) {
+      if (item?.translationKey && typeof translatedValues[item.translationKey] === "string")
+        return translatedValues[item.translationKey];
+      return item?.text || (item?.content || []).map((child) => nodeText(child, translatedValues)).join("");
     }
-    function build(item) {
+    function languageControl(available, update) {
+      const label = document.createElement("label");
+      label.className = "job-document-language-control";
+      const accessibleName = document.createElement("span");
+      accessibleName.className = "job-document-language-sr-only";
+      accessibleName.textContent = t("jobDetails.contentLanguage");
+      const select = document.createElement("select");
+      select.className = "job-document-language-select";
+      select.setAttribute("aria-label", t("jobDetails.contentLanguage"));
+      select.dataset.i18nAriaLabel = "jobDetails.contentLanguage";
+      const addOption = (key, locale) => {
+        const option = document.createElement("option");
+        option.value = locale;
+        option.textContent = t(key);
+        select.append(option);
+      };
+      addOption("jobDetails.contentLanguageOriginal", "en");
+      if (available.includes("hi")) addOption("jobDetails.contentLanguageHindi", "hi");
+      if (available.includes("bn")) addOption("jobDetails.contentLanguageBengali", "bn");
+      select.value = "en";
+      select.addEventListener("change", () => update(select.value));
+      label.append(accessibleName, select);
+      return label;
+    }
+    function build(item, context = {}) {
       if (!item || !documentTags.has(item.type)) return null;
       const node = document.createElement(item.type);
       const attrs = item.attrs || {};
+      let headingEntry = null;
       if (/^h[1-3]$/.test(item.type)) {
         let id = /^heading-[a-z0-9-]{1,88}$/.test(attrs.id || "")
           ? attrs.id
@@ -78,7 +106,8 @@
         used.add(unique);
         node.id = unique;
         const title = nodeText(item);
-        toc.push({ id: unique, title, level: Number(item.type[1]) });
+        headingEntry = { id: unique, title, level: Number(item.type[1]), source: item, translatedValues: {}, link: null };
+        toc.push(headingEntry);
       }
       if (item.type === "a") {
         const href = safeUrl(attrs.href);
@@ -89,13 +118,53 @@
       }
       if (["left", "center", "right"].includes(attrs.align))
         node.style.textAlign = attrs.align;
-      const translatedText = item.translationKey ? translations[item.translationKey] : null;
-      if (typeof translatedText === "string" && translatedText.trim()) node.textContent = translatedText;
+      const originalText = item.text || "";
+      const available = item.type === "span" && item.translationKey
+        ? ["hi", "bn"].filter((locale) => {
+            const value = translations?.[locale]?.[item.translationKey];
+            return typeof value === "string" && value.trim();
+          })
+        : [];
+      const legacyTranslation = item.translationKey ? staticTranslations[item.translationKey] : null;
+      if (available.length) {
+        node.className = "job-document-translation-run";
+        node.textContent = originalText;
+        const control = languageControl(available, (locale) => {
+          const value = locale === "en" ? "" : translations?.[locale]?.[item.translationKey];
+          node.textContent = typeof value === "string" && value.trim() ? value : originalText;
+          if (context.headingEntry) {
+            if (locale === "en") delete context.headingEntry.translatedValues[item.translationKey];
+            else context.headingEntry.translatedValues[item.translationKey] = node.textContent;
+            if (context.headingEntry.link)
+              context.headingEntry.link.textContent = nodeText(context.headingEntry.source, context.headingEntry.translatedValues);
+          }
+        });
+        if (context.deferredControls) context.deferredControls.push(control);
+        else {
+          const fragment = document.createDocumentFragment();
+          fragment.append(node, control);
+          (item.content || []).forEach((child) => {
+            const rendered = build(child, context);
+            if (rendered) fragment.append(rendered);
+          });
+          return fragment;
+        }
+      } else if (typeof legacyTranslation === "string" && legacyTranslation.trim()) node.textContent = legacyTranslation;
       else if (item.text) node.textContent = item.text;
+      const childContext = {
+        ...context,
+        ...(item.type === "a" ? { deferredControls: [] } : {}),
+        ...(headingEntry ? { headingEntry } : {}),
+      };
       (item.content || []).forEach((child) => {
-        const rendered = build(child);
+        const rendered = build(child, childContext);
         if (rendered) node.append(rendered);
       });
+      if (item.type === "a" && childContext.deferredControls.length) {
+        const fragment = document.createDocumentFragment();
+        fragment.append(node, ...childContext.deferredControls);
+        return fragment;
+      }
       return node;
     }
     (Array.isArray(nodes) ? nodes : []).forEach((item) => {
@@ -117,6 +186,7 @@
         const a = document.createElement("a");
         a.href = `#${item.id}`;
         a.textContent = item.title;
+        item.link = a;
         li.append(a);
         list.append(li);
       });

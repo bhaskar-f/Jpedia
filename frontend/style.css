@@ -2686,6 +2686,36 @@ body.board-details-shell #boardDetailRoot {
   font: inherit;
   font-size: 12px;
 }
+.job-document-language-control {
+  display: inline-block;
+  margin-inline-start: 0.3em;
+  vertical-align: baseline;
+  line-height: 1;
+}
+.job-document-language-select {
+  min-height: 22px;
+  max-width: 100%;
+  padding: 1px 4px;
+  border: 1px solid #aaa;
+  border-radius: 2px;
+  background: #fff;
+  color: #444;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.2;
+  vertical-align: baseline;
+}
+.job-document-language-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 .job-detail-translation-unavailable {
   flex-basis: 100%;
   margin: 0;

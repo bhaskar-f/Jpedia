@@ -32,6 +32,8 @@ const baseJob = {
   contentDocument: [
     { type: 'h2', attrs: { id: 'heading-preview-guidance' }, content: [{ type: 'span', translationKey: '8b18ebd2-e9ee-4f0d-995c-48f9e10506a1', text: 'Application guidance' }] },
     { type: 'p', content: [{ type: 'span', text: 'This English-only paragraph has no stored translation.' }] },
+    { type: 'p', content: [{ type: 'span', translationKey: '28f32abc-7bd1-4e21-98a1-36c9c95e1f2a', text: 'Hindi-only rich-content explanation.' }] },
+    { type: 'p', content: [{ type: 'span', translationKey: 'f8fbb2f8-5b28-4ddf-9c2c-36c9c95e1f2a', text: 'Bengali-only rich-content explanation.' }] },
     { type: 'p', content: [{ type: 'span', text: 'Use the ' }, { type: 'a', attrs: { href: 'https://recruitment.example.gov.in/notice.pdf' }, content: [{ type: 'span', translationKey: '619429fe-6e5b-4f1b-9241-61b267453f52', text: 'official notification' }] }, { type: 'span', text: ' for complete details.' }] },
     { type: 'table', content: [{ type: 'tbody', content: [{ type: 'tr', content: [{ type: 'th', content: [{ type: 'span', text: 'Vacancies' }] }, { type: 'td', content: [{ type: 'span', text: '240' }] }] }] }] },
   ],
@@ -51,6 +53,7 @@ const baseJob = {
       contentDocument: {
         '8b18ebd2-e9ee-4f0d-995c-48f9e10506a1': 'आवेदन संबंधी मार्गदर्शन',
         '619429fe-6e5b-4f1b-9241-61b267453f52': 'आधिकारिक अधिसूचना',
+        '28f32abc-7bd1-4e21-98a1-36c9c95e1f2a': 'केवल हिंदी में उपलब्ध व्याख्या।',
       },
     },
     bn: {
@@ -70,6 +73,7 @@ const baseJob = {
       contentDocument: {
         '8b18ebd2-e9ee-4f0d-995c-48f9e10506a1': 'আবেদনের নির্দেশিকা',
         '619429fe-6e5b-4f1b-9241-61b267453f52': 'সরকারি বিজ্ঞপ্তি',
+        'f8fbb2f8-5b28-4ddf-9c2c-36c9c95e1f2a': 'শুধুমাত্র বাংলায় থাকা ব্যাখ্যা।',
       },
     },
   },

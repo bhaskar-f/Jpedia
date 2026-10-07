@@ -487,9 +487,9 @@
           const map = job.contentTranslations?.[locale]?.contentDocument;
           return contentLanguage?.hasText(map) ? [[locale, map]] : [];
         }));
-        contentSwitcher(parent, documentTranslations, (target, translations) => {
-          target.append(window.JInfoJobContent.renderDocument(job.contentDocument, { translations: translations || {} }));
-        });
+        parent.append(window.JInfoJobContent.renderDocument(job.contentDocument, {
+          contentTranslations: documentTranslations,
+        }));
       }
       else parent.append(window.JInfoJobContent.renderSections(job.contentSections, job.contentBlocks));
     }
