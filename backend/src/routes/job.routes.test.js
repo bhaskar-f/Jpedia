@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const app = require('../app');
 const jobRoutes = require('./job.routes');
+const { Job } = require('../models');
 
 const translationKey = '8b18ebd2-e9ee-4f0d-995c-48f9e10506a1';
 
@@ -65,4 +66,46 @@ test('Author route validator still rejects translation keys without a marked sou
     runAttachedValidator(actualJobRoute('post', '/'), invalidPayload),
     (error) => error.code === 'VALIDATION_ERROR' && error.details.issues.some((issue) => issue.path.join('.') === `contentTranslations.hi.contentDocument.${translationKey}`),
   );
+});
+
+test('Author GET /api/jobs/:id route returns the saved draft and content translations to its owner', async () => {
+  const id = '6ac5cce76c94a66e65f7a55f';
+  const authorId = '65b000000000000000000001';
+  const savedJob = {
+    _id: id,
+    author: authorId,
+    status: 'DRAFT',
+    contentDocument: [{ type: 'p', content: [{ type: 'span', text: 'Apply online.', translationKey }] }],
+    contentTranslations: {
+      hi: { contentDocument: { [translationKey]: 'ऑनलाइन आवेदन करें।' } },
+      bn: { contentDocument: { [translationKey]: 'অনলাইনে আবেদন করুন।' } },
+    },
+  };
+  const originalFindOne = Job.findOne;
+  let query;
+  Job.findOne = (filter) => {
+    query = filter;
+    const result = {
+      populate() { return result; },
+      then(resolve, reject) { return Promise.resolve(savedJob).then(resolve, reject); },
+    };
+    return result;
+  };
+
+  try {
+    const route = actualJobRoute('get', '/:id');
+    const controller = route.route.stack[1].handle;
+    let response;
+    const res = {
+      status(status) { this.statusCode = status; return this; },
+      json(body) { response = body; return body; },
+    };
+    await controller({ params: { id }, user: { _id: authorId, role: 'AUTHOR' } }, res, (error) => { throw error; });
+    assert.equal(res.statusCode, 200);
+    assert.equal(query.$or[0]._id, id);
+    assert.equal(response.data.status, 'DRAFT');
+    assert.deepEqual(response.data.contentTranslations, savedJob.contentTranslations);
+  } finally {
+    Job.findOne = originalFindOne;
+  }
 });

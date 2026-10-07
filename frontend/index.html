@@ -84,6 +84,14 @@
   </head>
   <body>
     <div id="adminRoot" hidden></div>
+    <script>
+      if (/^\/admin(?:\/|$)/.test(window.location.pathname)) {
+        document.body.classList.add("admin-shell");
+        const adminRoot = document.getElementById("adminRoot");
+        adminRoot.hidden = false;
+        adminRoot.textContent = "Loading...";
+      }
+    </script>
     <div id="jobDetailRoot" hidden></div>
     <div id="boardDetailRoot" hidden></div>
     <header class="site-header">
@@ -401,6 +409,7 @@
     </div>
 
     <script src="/api-config.js"></script>
+    <script src="/admin.js" defer></script>
     <script src="/i18n.js" defer></script>
     <script src="/script.js" defer></script>
     <script src="/job-content.js" defer></script>
@@ -408,7 +417,6 @@
     <script src="/youtube-video.js" defer></script>
     <script src="/job-details.js" defer></script>
     <script src="/board-details.js" defer></script>
-    <script src="/admin.js" defer></script>
     <script src="/public-pages.js" defer></script>
   </body>
 </html>
